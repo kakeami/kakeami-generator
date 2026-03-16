@@ -1,0 +1,173 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f5f5f5;
+  color: #333;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.preview-wrapper {
+  flex: 0 0 60%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #eee;
+}
+
+.preview {
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 1;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.preview svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.metrics {
+  margin-top: 12px;
+  font-size: 13px;
+  font-family: monospace;
+  color: #666;
+}
+
+.controls-panel {
+  flex: 0 0 40%;
+  padding: 20px;
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
+.controls-panel h1 {
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  padding: 6px 14px;
+  border: 1px solid #888;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.actions button:hover {
+  background: #e0e0e0;
+}
+
+.presets {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.presets span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.preset-btn {
+  padding: 4px 10px;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  background: #f9f9f9;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.preset-btn:hover {
+  background: #ddd;
+}
+
+fieldset {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+legend {
+  font-weight: 600;
+  font-size: 14px;
+  padding: 0 6px;
+}
+
+.control-row {
+  display: grid;
+  grid-template-columns: 120px 50px 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.control-row label {
+  font-size: 13px;
+}
+
+.control-value {
+  font-size: 12px;
+  font-family: monospace;
+  text-align: right;
+  color: #555;
+}
+
+.control-row input[type="range"] {
+  width: 100%;
+}
+
+.control-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  grid-column: 3;
+}
+
+.control-row input[type="color"] {
+  width: 40px;
+  height: 28px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  cursor: pointer;
+  grid-column: 3;
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .preview-wrapper {
+    flex: none;
+    padding: 12px;
+  }
+
+  .controls-panel {
+    flex: none;
+    max-height: none;
+    padding: 12px;
+  }
+}
