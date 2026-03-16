@@ -1,6 +1,6 @@
 export { dRp1, rotationMatrix, applyRotation, mulberry32, createRng } from './math-utils';
 export type { Point2D, Rng } from './math-utils';
-export { Stroke, Block, Tile, KakeamiConfig } from './models';
+export { Stroke, Block, Tile, KakeamiConfig, kakeAngleOffsets } from './models';
 export { defaultRenderParams } from './render-params';
 export type { RenderParams } from './render-params';
 export {

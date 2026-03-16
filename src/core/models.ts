@@ -7,6 +7,27 @@ import { rectMinDistance } from './geometry';
 
 const PI = Math.PI;
 
+/**
+ * Angle offsets for k-kake hatching following manga practice:
+ *   k=1: θ
+ *   k=2: θ, θ+90°
+ *   k=3: θ, θ+90°, θ+45°  (primary → perpendicular → diagonal)
+ *   k=4: θ, θ+45°, θ+90°, θ+135°
+ */
+export function kakeAngleOffsets(k: number): number[] {
+  switch (k) {
+    case 1: return [0];
+    case 2: return [0, PI / 2];
+    case 3: return [0, PI / 2, PI / 4];
+    case 4: return [0, PI / 4, PI / 2, (3 * PI) / 4];
+    default: {
+      const offsets: number[] = [];
+      for (let j = 0; j < k; j++) offsets.push((j * PI) / k);
+      return offsets;
+    }
+  }
+}
+
 /** Normalize angle to [0, π). */
 function normAngle(theta: number): number {
   return ((theta % PI) + PI) % PI;
@@ -46,13 +67,11 @@ export class Block {
     return [this.primary, ...this.secondary];
   }
 
-  /** Standard block β_std(θ, k, δ) with equal-angle spacing. */
+  /** Standard block β_std(θ, k, δ) with manga-practice angle spacing. */
   static standard(theta: number, k: number, pitch: number): Block {
+    const offsets = kakeAngleOffsets(k);
     const primary = new Stroke(theta, pitch);
-    const secondary: Stroke[] = [];
-    for (let j = 1; j < k; j++) {
-      secondary.push(new Stroke(theta + (j * PI) / k, pitch));
-    }
+    const secondary = offsets.slice(1).map(o => new Stroke(theta + o, pitch));
     return new Block(primary, secondary);
   }
 }

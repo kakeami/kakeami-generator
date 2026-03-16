@@ -7,7 +7,7 @@
  */
 
 import type { KakeamiConfig, RenderParams, Point2D, Segment } from '../core';
-import { tilePolygon, hatchPolygon, createRng, defaultRenderParams } from '../core';
+import { tilePolygon, hatchPolygon, createRng, defaultRenderParams, kakeAngleOffsets } from '../core';
 import type { HatchedTile, RenderResult } from './types';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -119,8 +119,9 @@ export function renderToSvg(
     const regionPoly: Point2D[] = [
       [xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax],
     ];
+    const bgOffsets = kakeAngleOffsets(bgK);
     for (let j = 0; j < bgK; j++) {
-      const angle = fullParams.bgHatchingAngle + j * Math.PI / bgK;
+      const angle = fullParams.bgHatchingAngle + bgOffsets[j]!;
       const bgLines = hatchPolygon(regionPoly, angle, bgPitch);
       for (const [p0, p1] of bgLines) {
         const line = document.createElementNS(SVG_NS, 'line');
