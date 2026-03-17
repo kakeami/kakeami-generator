@@ -30,6 +30,133 @@ function defaultState(): AppState {
   };
 }
 
+// --- URL sharing ---
+
+/** Slider ranges for clamping URL params */
+const SLIDER_RANGES: Record<string, { min: number; max: number }> = {
+  regionSize: { min: 1, max: 20 },
+  tileSize: { min: 0.1, max: 3 },
+  k: { min: 1, max: 4 },
+  pitch: { min: 0.01, max: 0.5 },
+  lineWeight: { min: 0.1, max: 2 },
+  seed: { min: 0, max: 99999 },
+  margin: { min: 0, max: 0.1 },
+  noiseAngle: { min: 0, max: 10 },
+  noiseSpacing: { min: 0, max: 0.3 },
+  noiseWeight: { min: 0, max: 0.3 },
+  bgAngle: { min: 0, max: 180 },
+};
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v));
+}
+
+function stateToSearchParams(s: AppState): URLSearchParams {
+  const d = defaultState();
+  const dr = defaultRenderParams();
+  const p = new URLSearchParams();
+
+  if (s.regionSize !== d.regionSize) p.set('regionSize', String(s.regionSize));
+  if (s.tileSize !== d.tileSize) p.set('tileSize', String(s.tileSize));
+  if (s.k !== d.k) p.set('k', String(s.k));
+  if (s.pitch !== d.pitch) p.set('pitch', String(s.pitch));
+  if (s.lineWeight !== d.lineWeight) p.set('lineWeight', String(s.lineWeight));
+  if (s.seed !== d.seed) p.set('seed', String(s.seed));
+
+  const rp = s.renderParams;
+  if (rp.margin !== dr.margin) p.set('margin', String(rp.margin));
+  if (rp.noiseAngle !== dr.noiseAngle) p.set('noiseAngle', String(rp.noiseAngle));
+  if (rp.noiseSpacing !== dr.noiseSpacing) p.set('noiseSpacing', String(rp.noiseSpacing));
+  if (rp.noiseWeight !== dr.noiseWeight) p.set('noiseWeight', String(rp.noiseWeight));
+  if (rp.showOutline !== dr.showOutline) p.set('showOutline', rp.showOutline ? '1' : '0');
+  if (rp.backgroundColor !== dr.backgroundColor) p.set('bgColor', rp.backgroundColor);
+  if (rp.lineColor !== dr.lineColor) p.set('lineColor', rp.lineColor);
+  if (rp.bgHatching !== dr.bgHatching) p.set('bgHatching', rp.bgHatching ? '1' : '0');
+  if (rp.bgHatchingAngle !== dr.bgHatchingAngle) {
+    p.set('bgAngle', String(Math.round(rp.bgHatchingAngle * 180 / Math.PI)));
+  }
+  if (rp.lineStyle !== dr.lineStyle) p.set('lineStyle', rp.lineStyle);
+
+  return p;
+}
+
+function searchParamsToState(params: URLSearchParams): AppState {
+  const s = defaultState();
+  const validLineStyles = LINE_STYLES.map(ls => ls.value) as string[];
+
+  function num(key: string): number | null {
+    const v = params.get(key);
+    if (v === null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function clampedNum(key: string): number | null {
+    const n = num(key);
+    if (n === null) return null;
+    const range = SLIDER_RANGES[key];
+    return range ? clamp(n, range.min, range.max) : n;
+  }
+
+  const regionSize = clampedNum('regionSize');
+  if (regionSize !== null) s.regionSize = regionSize;
+
+  const tileSize = clampedNum('tileSize');
+  if (tileSize !== null) s.tileSize = tileSize;
+
+  const k = clampedNum('k');
+  if (k !== null) s.k = Math.round(k);
+
+  const pitch = clampedNum('pitch');
+  if (pitch !== null) s.pitch = pitch;
+
+  const lineWeight = clampedNum('lineWeight');
+  if (lineWeight !== null) s.lineWeight = lineWeight;
+
+  const seed = clampedNum('seed');
+  if (seed !== null) s.seed = Math.round(seed);
+
+  const margin = clampedNum('margin');
+  if (margin !== null) s.renderParams.margin = margin;
+
+  const noiseAngle = clampedNum('noiseAngle');
+  if (noiseAngle !== null) s.renderParams.noiseAngle = noiseAngle;
+
+  const noiseSpacing = clampedNum('noiseSpacing');
+  if (noiseSpacing !== null) s.renderParams.noiseSpacing = noiseSpacing;
+
+  const noiseWeight = clampedNum('noiseWeight');
+  if (noiseWeight !== null) s.renderParams.noiseWeight = noiseWeight;
+
+  const showOutline = params.get('showOutline');
+  if (showOutline !== null) s.renderParams.showOutline = showOutline === '1';
+
+  const bgColor = params.get('bgColor');
+  if (bgColor !== null) s.renderParams.backgroundColor = bgColor;
+
+  const lineColor = params.get('lineColor');
+  if (lineColor !== null) s.renderParams.lineColor = lineColor;
+
+  const bgHatching = params.get('bgHatching');
+  if (bgHatching !== null) s.renderParams.bgHatching = bgHatching === '1';
+
+  const bgAngle = clampedNum('bgAngle');
+  if (bgAngle !== null) s.renderParams.bgHatchingAngle = bgAngle * Math.PI / 180;
+
+  const lineStyle = params.get('lineStyle');
+  if (lineStyle !== null && validLineStyles.includes(lineStyle)) {
+    s.renderParams.lineStyle = lineStyle as LineStyle;
+  }
+
+  return s;
+}
+
+function buildShareUrl(): string {
+  const params = stateToSearchParams(state);
+  const qs = params.toString();
+  return window.location.origin + window.location.pathname + (qs ? '?' + qs : '');
+}
+
 let state: AppState = defaultState();
 let previewEl: HTMLElement | null = null;
 let controlsContainer: HTMLElement | null = null;
@@ -325,6 +452,17 @@ export function initApp(root: HTMLElement) {
   });
   actions.appendChild(pngBtn);
 
+  const shareBtn = document.createElement('button');
+  shareBtn.textContent = 'Share URL';
+  shareBtn.addEventListener('click', () => {
+    const url = buildShareUrl();
+    navigator.clipboard.writeText(url).then(() => {
+      shareBtn.textContent = 'Copied!';
+      setTimeout(() => { shareBtn.textContent = 'Share URL'; }, 1500);
+    });
+  });
+  actions.appendChild(shareBtn);
+
   panel.appendChild(actions);
 
   // Presets
@@ -365,6 +503,13 @@ export function initApp(root: HTMLElement) {
 
   layout.appendChild(panel);
   root.appendChild(layout);
+
+  // Restore state from URL query parameters if present
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.toString()) {
+    state = searchParamsToState(urlParams);
+    rebuildControls();
+  }
 
   render();
 }

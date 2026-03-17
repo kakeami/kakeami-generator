@@ -31,7 +31,7 @@ import type { Segment, Point2D } from '../../src/core/index';
 // Fixed parameters matching the experiment setup
 const REGION: [number, number, number, number] = [0, 0, 6, 6];
 const TILE_SIZE = 0.6;
-const K_STIPPLE = 2;
+const K_STIPPLE = 1;
 const K_VORONOI = 1;
 const PITCH = 0.08;
 const LINE_WEIGHT = 0.4;
