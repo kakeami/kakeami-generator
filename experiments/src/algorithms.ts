@@ -8,6 +8,7 @@ import {
   createRng,
   poissonDisk,
   buildVoronoiAdjacency,
+  voronoiCellAreas,
   adjListToEdges,
   bfsGreedyAngles,
   Block,
@@ -51,7 +52,7 @@ function randomAngles(
   return thetas;
 }
 
-/** Build KakeamiConfig from centers + angles + Voronoi edges. */
+/** Build KakeamiConfig from centers + angles + Voronoi edges + cell areas. */
 function buildConfig(
   centers: [number, number][],
   thetas: Float64Array,
@@ -61,12 +62,13 @@ function buildConfig(
   pitch: number,
   lineWeight: number,
   edges: [number, number][],
+  cellAreas: number[],
 ): KakeamiConfig {
   const ats = actualSize(tileSize, pitch);
   const tiles = centers.map(([cx, cy], i) =>
     new Tile(cx, cy, Block.standard(thetas[i]!, k, pitch)),
   );
-  return new KakeamiConfig(tiles, region, ats, ats, lineWeight, edges);
+  return new KakeamiConfig(tiles, region, ats, ats, lineWeight, edges, cellAreas);
 }
 
 export type Condition = 'poissonBfs' | 'poissonRandom' | 'randomBfs' | 'randomRandom';
@@ -131,6 +133,7 @@ export function runCondition(
   // All conditions use Voronoi adjacency so metrics match the graph BFS optimises on
   const adj = buildVoronoiAdjacency(centers);
   const edges = adjListToEdges(adj);
+  const cellAreas = voronoiCellAreas(centers, region);
 
-  return buildConfig(centers, thetas, region, tileSize, k, pitch, lineWeight, edges);
+  return buildConfig(centers, thetas, region, tileSize, k, pitch, lineWeight, edges, cellAreas);
 }

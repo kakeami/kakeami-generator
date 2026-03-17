@@ -102,6 +102,7 @@ export class KakeamiConfig {
   readonly tileHeight: number;
   readonly lineWeight: number;
   private readonly _edges: readonly [number, number][] | null;
+  private readonly _cellAreas: readonly number[] | null;
 
   constructor(
     tiles: readonly Tile[],
@@ -110,6 +111,7 @@ export class KakeamiConfig {
     tileHeight: number,
     lineWeight: number = 0.5,
     edges?: readonly [number, number][],
+    cellAreas?: readonly number[],
   ) {
     if (tileHeight < tileWidth) {
       throw new Error(
@@ -122,6 +124,7 @@ export class KakeamiConfig {
     this.tileHeight = tileHeight;
     this.lineWeight = lineWeight;
     this._edges = edges ?? null;
+    this._cellAreas = cellAreas ?? null;
   }
 
   /** Adjacency graph edges. Uses stored Voronoi edges if available, else rect-overlap fallback. */
@@ -180,5 +183,66 @@ export class KakeamiConfig {
       sumSin += Math.sin(2 * t.phi);
     }
     return Math.sqrt((sumCos / n) ** 2 + (sumSin / n) ** 2);
+  }
+
+  /** Coverage ratio C_cov ∈ [0, 1]. Fraction of region covered by at least one tile. */
+  cCov(gridRes: number = 200): number {
+    const [xmin, ymin, xmax, ymax] = this.region;
+    const n = this.tiles.length;
+    if (n === 0) return 0;
+
+    const hw = this.tileWidth / 2;
+    const hh = this.tileHeight / 2;
+
+    // Pre-compute cos/sin for each tile
+    const cosP = new Float64Array(n);
+    const sinP = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      cosP[i] = Math.cos(this.tiles[i]!.phi);
+      sinP[i] = Math.sin(this.tiles[i]!.phi);
+    }
+
+    let covered = 0;
+    const dx = (xmax - xmin) / gridRes;
+    const dy = (ymax - ymin) / gridRes;
+
+    for (let gi = 0; gi < gridRes; gi++) {
+      const px = xmin + (gi + 0.5) * dx;
+      for (let gj = 0; gj < gridRes; gj++) {
+        const py = ymin + (gj + 0.5) * dy;
+
+        let hit = false;
+        for (let t = 0; t < n; t++) {
+          const tile = this.tiles[t]!;
+          const rx = px - tile.cx;
+          const ry = py - tile.cy;
+          // Rotate into tile-local coordinates (rotate by -phi)
+          const lx = rx * cosP[t]! + ry * sinP[t]!;
+          const ly = -rx * sinP[t]! + ry * cosP[t]!;
+          if (Math.abs(lx) <= hw && Math.abs(ly) <= hh) {
+            hit = true;
+            break;
+          }
+        }
+        if (hit) covered++;
+      }
+    }
+
+    return covered / (gridRes * gridRes);
+  }
+
+  /** Voronoi cell area CV (coefficient of variation). Uses stored cell areas. */
+  uVor(): number {
+    if (this._cellAreas === null || this._cellAreas.length < 2) return 0;
+    const areas = this._cellAreas;
+    const n = areas.length;
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += areas[i]!;
+    const mean = sum / n;
+    if (mean < 1e-12) return 0;
+    let sumSq = 0;
+    for (let i = 0; i < n; i++) sumSq += (areas[i]! - mean) ** 2;
+    const std = Math.sqrt(sumSq / (n - 1));
+    return std / mean;
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildVoronoiAdjacency } from '../adjacency';
+import { buildVoronoiAdjacency, voronoiCellAreas } from '../adjacency';
 
 describe('buildVoronoiAdjacency', () => {
   it('n<4 returns complete graph', () => {
@@ -48,5 +48,35 @@ describe('buildVoronoiAdjacency', () => {
     expect(adj.length).toBe(9);
     // Center node (1,1) = index 4 should have many neighbors
     expect(adj[4]!.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('voronoiCellAreas', () => {
+  it('returns one area per centre', () => {
+    const centers: [number, number][] = [[1, 1], [3, 1], [1, 3], [3, 3]];
+    const areas = voronoiCellAreas(centers, [0, 0, 4, 4]);
+    expect(areas.length).toBe(4);
+  });
+
+  it('areas sum to region area', () => {
+    const centers: [number, number][] = [[1, 1], [3, 1], [1, 3], [3, 3]];
+    const region: [number, number, number, number] = [0, 0, 4, 4];
+    const areas = voronoiCellAreas(centers, region);
+    const totalArea = areas.reduce((a, b) => a + b, 0);
+    const regionArea = (region[2] - region[0]) * (region[3] - region[1]);
+    expect(totalArea).toBeCloseTo(regionArea, 1);
+  });
+
+  it('symmetric points have equal areas', () => {
+    // 4 points at corners of a square → symmetric → equal Voronoi cells
+    const centers: [number, number][] = [[1, 1], [3, 1], [1, 3], [3, 3]];
+    const areas = voronoiCellAreas(centers, [0, 0, 4, 4]);
+    for (const a of areas) {
+      expect(a).toBeCloseTo(areas[0]!, 1);
+    }
+  });
+
+  it('returns empty array for no centres', () => {
+    expect(voronoiCellAreas([], [0, 0, 4, 4])).toEqual([]);
   });
 });

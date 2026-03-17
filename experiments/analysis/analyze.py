@@ -36,22 +36,28 @@ CONDITION_LABELS = {
     "randomBfs": "Random + BFS",
     "randomRandom": "Random + Random",
 }
-METRICS = ["eContrast", "eLdG", "sOrder"]
+METRICS = ["eContrast", "eLdG", "sOrder", "cCov", "uVor"]
 METRIC_LABELS = {
     "eContrast": r"$E_{\mathrm{contrast}}$",
     "eLdG": r"$E_{\mathrm{LdG}}$",
     "sOrder": r"$S$",
+    "cCov": r"$C_{\mathrm{cov}}$",
+    "uVor": r"$U_{\mathrm{vor}}$",
 }
 METRIC_LABELS_PLAIN = {
     "eContrast": "E_contrast",
     "eLdG": "E_LdG",
     "sOrder": "S",
+    "cCov": "C_cov",
+    "uVor": "U_vor",
 }
-# For E_contrast and E_LdG, higher is better; for S, lower is better
+# For E_contrast, E_LdG, C_cov: higher is better; for S, U_vor: lower is better
 METRIC_HIGHER_IS_BETTER = {
     "eContrast": True,
     "eLdG": True,
     "sOrder": False,
+    "cCov": True,
+    "uVor": False,
 }
 
 
@@ -116,7 +122,6 @@ def summary_table(df: pd.DataFrame) -> pd.DataFrame:
             row[METRIC_LABELS_PLAIN[m]] = f"{mean:.3f} \u00b1 {std:.3f}"
         row["nTiles (mean)"] = f"{sub['nTiles'].mean():.1f}"
         row["nEdges (mean)"] = f"{sub['nEdges'].mean():.1f}"
-        row["wallTimeMs (mean)"] = f"{sub['wallTimeMs'].mean():.1f}"
         rows.append(row)
     return pd.DataFrame(rows)
 

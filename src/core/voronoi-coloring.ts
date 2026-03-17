@@ -6,7 +6,7 @@ import { dRp1, createRng } from './math-utils';
 import type { Rng } from './math-utils';
 import { Block, Tile, KakeamiConfig } from './models';
 import { poissonDisk } from './poisson-disk';
-import { buildVoronoiAdjacency } from './adjacency';
+import { buildVoronoiAdjacency, voronoiCellAreas } from './adjacency';
 
 const PI = Math.PI;
 
@@ -157,10 +157,11 @@ export function voronoiColoring(
 
   // Store Voronoi edges so metrics use the same adjacency as BFS
   const edges = adjListToEdges(adj);
+  const cellAreas = voronoiCellAreas(centers, region);
 
   const tiles = centers.map(([cx, cy], i) =>
     new Tile(cx, cy, Block.standard(thetas[i]!, k, pitch)),
   );
 
-  return new KakeamiConfig(tiles, region, actualTileSize, actualTileSize, lineWeight, edges);
+  return new KakeamiConfig(tiles, region, actualTileSize, actualTileSize, lineWeight, edges, cellAreas);
 }

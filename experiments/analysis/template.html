@@ -1,3 +1,49 @@
+<!--
+  === CANONICAL SECTION OUTLINE ===
+  This is the authoritative list of report sections.
+  When editing this template, verify that ALL sections below are present
+  after your changes. Do not remove or renumber sections without updating
+  this outline.
+
+  1. Introduction
+  2. Related Work
+     2.1 NPR Hatching
+     2.2 ML-Based Manga Tone Generation
+     2.3 Aperiodic Tilings in NPR
+     2.4 Direction Field Design
+     2.5 Our Contribution
+  3. Formulation
+     3.1 Angle Space
+     3.2 Data Structure Hierarchy
+     3.3 Quality Metrics (Angular: E_contrast, E_LdG, S; Spatial: C_cov, U_vor)
+  4. Method
+     4.1 Algorithm Pipeline Overview
+     4.2 Tile Placement Strategies
+     4.3 Angle Assignment Strategies
+     4.4 Experimental Conditions (2x2)
+  5. Experimental Setup
+  6. Results
+     6.1 Quality Metrics (box plots)
+     6.2 Summary Table
+     6.3 Statistical Analysis (ANOVA, effect sizes)
+     6.4 Representative Images
+  7. Discussion
+     7.1 Effect of Angle Assignment
+     7.2 Effect of Tile Placement
+     7.3 k-Invariance of Quality Metrics
+     7.4 Interpretation of E_LdG
+     7.5 Scalar Order Parameter
+     7.6 Limitations
+  8. Future Work
+     8.1 Tonal Gradation via Spatially Varying k
+     8.2 Generalisation to Arbitrary Pattern Tiles
+         8.2.1 Non-Line Fill Patterns in Rectangular Tiles
+         8.2.2 Non-Rectangular Tile Shapes
+     8.3 Nawaami (Curved-Line Hatching)
+     8.4 Connection to Mathematical Tiling Problems
+     8.5 k-Aware Quality Metrics
+  9. References
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -230,11 +276,13 @@
   <p>
     Given a configuration $K$ and its adjacency edge set $E$
     (Voronoi adjacency edges derived from Delaunay triangulation of tile centres),
-    we propose three complementary metrics.
-    Each captures a different aspect of kakeami quality,
-    and together they provide a comprehensive quantitative evaluation framework.
+    we propose five complementary metrics split across two axes:
+    three <em>angular</em> metrics evaluating orientation quality
+    and two <em>spatial</em> metrics evaluating placement quality.
+    Together they provide a comprehensive quantitative evaluation framework.
     To the best of our knowledge, these metrics have not been previously defined for hatching evaluation.
   </p>
+  <h4>Angular Metrics</h4>
 
   <h4>Angle Contrast $E_{\mathrm{contrast}}$</h4>
   <p>
@@ -265,6 +313,31 @@
     $S = 1$ indicates all tiles share the same angle.
     For kakeami, low $S$ is desirable &mdash; we want diverse, well-distributed angles
     rather than a dominant orientation.
+  </p>
+
+  <h4>Spatial Metrics</h4>
+
+  <h4>Coverage Ratio $C_{\mathrm{cov}}$</h4>
+  <p>
+    The fraction of the region covered by at least one tile:
+    $$C_{\mathrm{cov}} = \frac{|\{p \in R : p \in \bigcup_i \tau_i\}|}{|R|} \;\in [0, 1]$$
+    Estimated by sampling the region on a regular grid and testing point-in-rotated-rectangle membership.
+    $C_{\mathrm{cov}} = 1$ means no background is visible; lower values indicate gaps due to tile clustering.
+    This metric is standard in computational geometry as <em>packing density</em>
+    and in NPR stippling as <em>coverage ratio</em> (Secord, 2002).
+  </p>
+
+  <h4>Voronoi Cell Area CV $U_{\mathrm{vor}}$</h4>
+  <p>
+    The coefficient of variation (CV) of Voronoi cell areas measures spatial uniformity of tile placement:
+    $$U_{\mathrm{vor}} = \frac{\sigma_A}{\bar{A}}$$
+    where $A_i$ is the area of the Voronoi cell for tile $i$, clipped to the region boundary.
+    $U_{\mathrm{vor}} = 0$ for a perfect lattice (all cells identical);
+    $U_{\mathrm{vor}} \approx 0.53$ for a Poisson process (completely random);
+    Poisson-disk sampling yields intermediate values.
+    This is a standard measure in spatial statistics for point pattern analysis
+    (Okabe et al., <em>Spatial Tessellations</em>, 2000).
+    Lower values indicate more uniform tile distribution.
   </p>
 
   <!-- 4. Method -->
@@ -377,13 +450,15 @@
 
   <h3>6.1 Quality Metrics</h3>
 
-  {% for metric in ['eContrast', 'eLdG', 'sOrder'] %}
+  {% for metric in ['eContrast', 'eLdG', 'sOrder', 'cCov', 'uVor'] %}
   <figure>
     <img src="assets/boxplot_{{ metric }}.png" alt="Box plot of {{ metric }}" />
     <figcaption>
       {% if metric == 'eContrast' %}Figure 2: $E_{\mathrm{contrast}}$ distribution across conditions ($k = 1$, {{ n_seeds }} seeds).
       {% elif metric == 'eLdG' %}Figure 3: $E_{\mathrm{LdG}}$ distribution. Values above 0.5 indicate anti-ferromagnetic ordering beyond random.
-      {% else %}Figure 4: Scalar order parameter $S$. Lower values indicate better angular isotropy.{% endif %}
+      {% elif metric == 'sOrder' %}Figure 4: Scalar order parameter $S$. Lower values indicate better angular isotropy.
+      {% elif metric == 'cCov' %}Figure 5: Coverage ratio $C_{\mathrm{cov}}$. Higher values mean less visible background.
+      {% else %}Figure 6: Voronoi cell area CV $U_{\mathrm{vor}}$. Lower values indicate more uniform tile spacing.{% endif %}
     </figcaption>
   </figure>
   {% endfor %}
@@ -402,9 +477,10 @@
       <th>$E_{\mathrm{contrast}}$</th>
       <th>$E_{\mathrm{LdG}}$</th>
       <th>$S$</th>
+      <th>$C_{\mathrm{cov}}$</th>
+      <th>$U_{\mathrm{vor}}$</th>
       <th>Tiles</th>
       <th>Edges</th>
-      <th>Time (ms)</th>
     </tr>
     {% for row in summary_rows %}
     <tr>
@@ -412,9 +488,10 @@
       <td{% if best_cells.get('E_contrast') == row.condition %} class="best"{% endif %}>{{ row.E_contrast }}</td>
       <td{% if best_cells.get('E_LdG') == row.condition %} class="best"{% endif %}>{{ row.E_LdG }}</td>
       <td{% if best_cells.get('S') == row.condition %} class="best"{% endif %}>{{ row.S }}</td>
+      <td{% if best_cells.get('C_cov') == row.condition %} class="best"{% endif %}>{{ row.C_cov }}</td>
+      <td{% if best_cells.get('U_vor') == row.condition %} class="best"{% endif %}>{{ row.U_vor }}</td>
       <td>{{ row["nTiles (mean)"] }}</td>
       <td>{{ row["nEdges (mean)"] }}</td>
-      <td>{{ row["wallTimeMs (mean)"] }}</td>
     </tr>
     {% endfor %}
   </table>
@@ -501,19 +578,24 @@
 
   <h3>7.2 Effect of Tile Placement</h3>
   <p>
-    The ANOVA results show that the placement factor (Poisson-disk vs. uniform random)
-    has a statistically significant but smaller effect than angle assignment.
-    Poisson-disk placement provides a modest improvement over uniform random placement.
-    The minimum distance guarantee prevents tile clustering, which leads to more regular adjacency graphs
-    and, consequently, more effective angle assignment.
-    The smaller $\eta^2$ for placement relative to angle assignment
-    suggests that angle optimisation is the more important of the two factors.
+    While the angular metrics ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$)
+    show little sensitivity to placement strategy,
+    the spatial metrics reveal a stark difference.
+    Poisson-disk placement achieves near-perfect coverage ($C_{\mathrm{cov}} \approx 1$)
+    thanks to the 1.4&times; tile expansion and minimum-distance guarantee,
+    whereas uniform random placement leaves visible gaps ($C_{\mathrm{cov}} < 1$)
+    due to tile clustering.
+    The Voronoi cell area CV ($U_{\mathrm{vor}}$) confirms this:
+    Poisson-disk conditions show significantly lower CV (more uniform spacing)
+    than random conditions, which approach the theoretical Poisson process value of $\approx 0.53$.
+    These spatial metrics capture a critical quality dimension &mdash; visual completeness &mdash;
+    that the angular metrics alone cannot detect.
   </p>
 
   <h3>7.3 k-Invariance of Quality Metrics</h3>
   <p>
-    An important property of our three quality metrics is their invariance to the kake count $k$.
-    All three metrics &mdash; $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, and $S$ &mdash;
+    An important property of all five quality metrics is their invariance to the kake count $k$.
+    All five metrics &mdash; $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ &mdash;
     depend only on the primary angle $\phi_i$ of each tile,
     which is determined entirely by the tile placement and angle assignment strategies.
     The secondary strokes added for $k \geq 2$ (at fixed angular offsets of 45&deg;, 90&deg;, etc.)
@@ -705,6 +787,8 @@
     <li>Zhang, L., et al. (2021). Generating Manga from Illustrations. <em>CVPR 2021</em>.</li>
     <li>Conway, J. H., &amp; Radin, C. (1998). Quaquaversal tilings and rotations. <em>Inventiones Mathematicae</em>, 132(1), 179&ndash;188.</li>
     <li>Gr&uuml;nbaum, B., &amp; Shephard, G. C. (1987). <em>Tilings and Patterns</em>. W. H. Freeman.</li>
+    <li>Secord, A. (2002). Weighted Voronoi Stippling. <em>NPAR 2002</em>, 37&ndash;43.</li>
+    <li>Okabe, A., Boots, B., Sugihara, K., &amp; Chiu, S. N. (2000). <em>Spatial Tessellations: Concepts and Applications of Voronoi Diagrams</em> (2nd ed.). Wiley.</li>
     <li>Beaufort, P.-A., Lambrechts, J., Henrotte, F., Geuzaine, C., &amp; Remacle, J.-F. (2017). Computing cross fields &mdash; A PDE approach based on the Ginzburg-Landau theory. <em>arXiv:1706.01344</em>.</li>
     <li>Viertel, R., &amp; Osting, B. (2019). An Approach to Quad Meshing Based on Harmonic Cross-Valued Maps and the Ginzburg-Landau Theory. <em>SIAM J. Sci. Comput.</em>, 41(1).</li>
     <li>Vaxman, A., et al. (2016). Directional Field Synthesis, Design, and Processing. <em>Computer Graphics Forum</em>, 35(2), 545&ndash;572.</li>

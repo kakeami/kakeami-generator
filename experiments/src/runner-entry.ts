@@ -16,6 +16,8 @@ export interface ExperimentResult {
   eContrast: number;
   eLdG: number;
   sOrder: number;
+  cCov: number;
+  uVor: number;
   wallTimeMs: number;
   svgString: string;
 }
@@ -56,6 +58,8 @@ function runExperiment(
     eContrast: config.eContrast(),
     eLdG: config.eLdG(),
     sOrder: config.sOrder(),
+    cCov: config.cCov(),
+    uVor: config.uVor(),
     wallTimeMs,
     svgString,
   };

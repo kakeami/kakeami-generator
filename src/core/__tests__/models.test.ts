@@ -140,3 +140,55 @@ describe('KakeamiConfig stored edges', () => {
     expect(config.eLdG()).toBeGreaterThan(0);
   });
 });
+
+describe('KakeamiConfig.cCov', () => {
+  it('returns 1.0 for a tile that covers the entire region', () => {
+    // Single large tile covering the 2x2 region (phi=0 → axis-aligned)
+    const tiles = [new Tile(1, 1, Block.standard(0, 1, 0.05))];
+    const region: [number, number, number, number] = [0, 0, 2, 2];
+    const config = new KakeamiConfig(tiles, region, 2, 2, 0.5);
+    expect(config.cCov()).toBeCloseTo(1.0, 1);
+  });
+
+  it('returns 0.0 for no tiles', () => {
+    const config = new KakeamiConfig([], [0, 0, 2, 2], 1, 1, 0.5);
+    expect(config.cCov()).toBe(0);
+  });
+
+  it('returns partial coverage for a small tile', () => {
+    // 1x1 tile in a 2x2 region → ~0.25 coverage
+    const tiles = [new Tile(1, 1, Block.standard(0, 1, 0.05))];
+    const region: [number, number, number, number] = [0, 0, 2, 2];
+    const config = new KakeamiConfig(tiles, region, 1, 1, 0.5);
+    const cov = config.cCov();
+    expect(cov).toBeGreaterThan(0.2);
+    expect(cov).toBeLessThan(0.3);
+  });
+});
+
+describe('KakeamiConfig.uVor', () => {
+  it('returns 0 when no cell areas stored', () => {
+    const tiles = [new Tile(0, 0, Block.standard(0, 1, 0.05))];
+    const config = new KakeamiConfig(tiles, [0, 0, 2, 2], 1, 1, 0.5);
+    expect(config.uVor()).toBe(0);
+  });
+
+  it('returns 0 for identical cell areas', () => {
+    const tiles = [
+      new Tile(0, 0, Block.standard(0, 1, 0.05)),
+      new Tile(1, 0, Block.standard(0, 1, 0.05)),
+    ];
+    const config = new KakeamiConfig(tiles, [0, 0, 2, 2], 1, 1, 0.5, undefined, [1, 1]);
+    expect(config.uVor()).toBeCloseTo(0);
+  });
+
+  it('returns positive CV for unequal cell areas', () => {
+    const tiles = [
+      new Tile(0, 0, Block.standard(0, 1, 0.05)),
+      new Tile(1, 0, Block.standard(0, 1, 0.05)),
+      new Tile(2, 0, Block.standard(0, 1, 0.05)),
+    ];
+    const config = new KakeamiConfig(tiles, [0, 0, 3, 3], 1, 1, 0.5, undefined, [1, 2, 3]);
+    expect(config.uVor()).toBeGreaterThan(0);
+  });
+});

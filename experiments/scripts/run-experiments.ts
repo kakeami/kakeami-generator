@@ -40,6 +40,8 @@ interface ExperimentResult {
   eContrast: number;
   eLdG: number;
   sOrder: number;
+  cCov: number;
+  uVor: number;
   wallTimeMs: number;
   svgString: string;
 }
