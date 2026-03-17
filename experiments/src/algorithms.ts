@@ -1,5 +1,5 @@
 /**
- * Four experimental conditions for the 2×2 comparison.
+ * Five experimental conditions: 2×2 factorial + checkerboard diagnostic.
  *
  * All functions share the same signature and return a KakeamiConfig.
  */
@@ -40,6 +40,29 @@ function uniformRandomPoints(
   return points;
 }
 
+/** Generate grid centres with checkerboard 0°/90° angles. */
+function gridCheckerboardCenters(
+  region: Region,
+  tileSize: number,
+): { centers: [number, number][]; thetas: Float64Array } {
+  const [xmin, ymin, xmax, ymax] = region;
+  const regionWidth = xmax - xmin;
+  const regionHeight = ymax - ymin;
+  const nCols = Math.floor(regionWidth / tileSize);
+  const nRows = Math.floor(regionHeight / tileSize);
+  const stepX = regionWidth / nCols;
+  const stepY = regionHeight / nRows;
+  const centers: [number, number][] = [];
+  const angles: number[] = [];
+  for (let row = 0; row < nRows; row++) {
+    for (let col = 0; col < nCols; col++) {
+      centers.push([xmin + (col + 0.5) * stepX, ymin + (row + 0.5) * stepY]);
+      angles.push((row + col) % 2 === 0 ? 0 : PI / 2);
+    }
+  }
+  return { centers, thetas: Float64Array.from(angles) };
+}
+
 /** Assign random angles from rng.uniform(0, PI). */
 function randomAngles(
   n: number,
@@ -71,13 +94,14 @@ function buildConfig(
   return new KakeamiConfig(tiles, region, ats, ats, lineWeight, edges, cellAreas);
 }
 
-export type Condition = 'poissonBfs' | 'poissonRandom' | 'randomBfs' | 'randomRandom';
+export type Condition = 'poissonBfs' | 'poissonRandom' | 'randomBfs' | 'randomRandom' | 'gridCheckerboard';
 
 /**
- * Run one of the 4 experimental conditions.
+ * Run one of the 5 experimental conditions.
  *
  * For randomBfs / randomRandom, the tile count `n` is determined by first
  * running poissonDisk with a separate RNG so the comparison is fair.
+ * gridCheckerboard is deterministic and ignores the seed.
  */
 export function runCondition(
   condition: Condition,
@@ -88,6 +112,18 @@ export function runCondition(
   lineWeight: number,
   seed: number,
 ): KakeamiConfig {
+  // gridCheckerboard is deterministic — no seed-dependent RNG needed
+  if (condition === 'gridCheckerboard') {
+    const { centers, thetas } = gridCheckerboardCenters(region, tileSize);
+    if (centers.length === 0) {
+      return new KakeamiConfig([], region, tileSize, tileSize, lineWeight);
+    }
+    const adj = buildVoronoiAdjacency(centers);
+    const edges = adjListToEdges(adj);
+    const cellAreas = voronoiCellAreas(centers, region);
+    return buildConfig(centers, thetas, region, tileSize, k, pitch, lineWeight, edges, cellAreas);
+  }
+
   // RNG for Poisson-disk count (deterministic per seed, independent of condition RNG)
   const countRng = createRng(seed);
   const poissonCenters = poissonDisk(region, tileSize, countRng);

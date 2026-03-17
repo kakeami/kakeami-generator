@@ -1,9 +1,9 @@
 /**
  * Playwright-driven experiment runner (two-phase design).
  *
- * Phase 1: 4 conditions × 100 seeds × k=1 → metrics + PNG  (400 runs)
- * Phase 2: 4 conditions × 3 extra k values × 1 median seed → PNG only  (12 runs)
- * Total: 412 runs.
+ * Phase 1: 5 conditions × 100 seeds × k=1 → metrics + PNG  (500 runs)
+ * Phase 2: 5 conditions × 3 extra k values × 1 median seed → PNG only  (15 runs)
+ * Total: 515 runs.
  *
  * 1. Builds the project with Vite
  * 2. Serves the build with `vite preview`
@@ -16,7 +16,7 @@ import { execSync, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const CONDITIONS = ['poissonBfs', 'poissonRandom', 'randomBfs', 'randomRandom'] as const;
+const CONDITIONS = ['poissonBfs', 'poissonRandom', 'randomBfs', 'randomRandom', 'gridCheckerboard'] as const;
 const SEEDS = Array.from({ length: 100 }, (_, i) => i); // 0..99
 const METRIC_K = 1;
 const IMAGE_K_VALUES = [2, 3, 4];
@@ -42,6 +42,7 @@ interface ExperimentResult {
   sOrder: number;
   cCov: number;
   uVor: number;
+  hAngle: number;
   wallTimeMs: number;
   svgString: string;
 }

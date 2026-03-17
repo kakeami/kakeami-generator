@@ -15,12 +15,12 @@
   3. Formulation
      3.1 Angle Space
      3.2 Data Structure Hierarchy
-     3.3 Quality Metrics (Angular: E_contrast, E_LdG, S; Spatial: C_cov, U_vor)
+     3.3 Quality Metrics (Angular: E_contrast, E_LdG, S, H_angle; Spatial: C_cov, U_vor)
   4. Method
      4.1 Algorithm Pipeline Overview
      4.2 Tile Placement Strategies
      4.3 Angle Assignment Strategies
-     4.4 Experimental Conditions (2x2)
+     4.4 Experimental Conditions (2x2 + checkerboard)
   5. Experimental Setup
   6. Results
      6.1 Quality Metrics (box plots)
@@ -34,6 +34,7 @@
      7.4 Interpretation of E_LdG
      7.5 Scalar Order Parameter
      7.6 Limitations
+     7.7 The Checkerboard Problem and Angle Entropy
   8. Future Work
      8.1 Tonal Gradation via Spatially Varying k
      8.2 Generalisation to Arbitrary Pattern Tiles
@@ -115,7 +116,7 @@
     /* Image grid */
     .image-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 0.5rem;
       margin: 1rem 0;
     }
@@ -132,7 +133,7 @@
 
     /* Responsive */
     @media (max-width: 600px) {
-      .image-grid { grid-template-columns: repeat(2, 1fr); }
+      .image-grid { grid-template-columns: repeat(3, 1fr); }
       table { font-size: 0.75rem; }
     }
   </style>
@@ -276,8 +277,8 @@
   <p>
     Given a configuration $K$ and its adjacency edge set $E$
     (Voronoi adjacency edges derived from Delaunay triangulation of tile centres),
-    we propose five complementary metrics split across two axes:
-    three <em>angular</em> metrics evaluating orientation quality
+    we propose six complementary metrics split across two axes:
+    four <em>angular</em> metrics evaluating orientation quality
     and two <em>spatial</em> metrics evaluating placement quality.
     Together they provide a comprehensive quantitative evaluation framework.
     To the best of our knowledge, these metrics have not been previously defined for hatching evaluation.
@@ -313,6 +314,20 @@
     $S = 1$ indicates all tiles share the same angle.
     For kakeami, low $S$ is desirable &mdash; we want diverse, well-distributed angles
     rather than a dominant orientation.
+  </p>
+
+  <h4>Angle Entropy $H_{\mathrm{angle}}$</h4>
+  <p>
+    The normalised Shannon entropy of the primary-angle distribution measures how diverse
+    the angle usage is across all tiles:
+    $$H_{\mathrm{angle}} = -\frac{1}{\ln N_{\mathrm{bins}}} \sum_{b=1}^{N_{\mathrm{bins}}} p_b \ln p_b \;\in [0, 1]$$
+    where the angle range $[0, \pi)$ is divided into $N_{\mathrm{bins}} = 12$ equal bins (15&deg; each)
+    and $p_b$ is the fraction of tiles whose primary angle falls in bin $b$.
+    $H_{\mathrm{angle}} = 1$ indicates a perfectly uniform distribution of angles across all bins;
+    $H_{\mathrm{angle}} = 0$ means all tiles share the same angle.
+    A checkerboard pattern using only 0&deg; and 90&deg; achieves
+    $H_{\mathrm{angle}} = \ln 2 / \ln 12 \approx 0.28$, revealing its limited angle diversity
+    despite achieving high scores on all other angular metrics.
   </p>
 
   <h4>Spatial Metrics</h4>
@@ -387,20 +402,40 @@
     <strong>Random</strong>: each tile independently receives $\theta \sim \mathrm{Uniform}(0, \pi)$.
   </p>
 
-  <h3>4.4 Experimental Conditions (2&times;2)</h3>
+  <h3>4.4 Experimental Conditions (2&times;2 + Checkerboard)</h3>
   <table>
     <tr><th></th><th>BFS Greedy Angles</th><th>Random Angles</th></tr>
     <tr><td><strong>Poisson-disk Placement</strong></td><td>poissonBfs (proposed)</td><td>poissonRandom</td></tr>
     <tr><td><strong>Random Placement</strong></td><td>randomBfs</td><td>randomRandom (baseline)</td></tr>
   </table>
+  <p>
+    In addition to the 2&times;2 factorial conditions, we include a fifth condition:
+    <strong>Grid + Checkerboard</strong> (<code>gridCheckerboard</code>).
+    Tiles are placed on a regular square grid with spacing equal to the tile size (0.6),
+    yielding $10 \times 10 = 100$ tiles in the $[0, 6]^2$ region.
+    Angles alternate between 0&deg; and 90&deg; in a checkerboard pattern:
+    tiles at even $(r + c)$ positions receive 0&deg;, odd positions receive 90&deg;.
+    This condition is entirely deterministic (identical across all seeds)
+    and serves to demonstrate the <em>checkerboard hack</em>:
+    a simple regular pattern that achieves near-optimal scores on
+    $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$
+    while producing a visually mechanical, non-natural result.
+    The angle entropy $H_{\mathrm{angle}}$ is specifically designed to penalise this configuration.
+  </p>
+  <p>
+    Note that gridCheckerboard uses 100 tiles (vs. ~69 for Poisson-disk conditions)
+    because it uses the natural grid spacing rather than Poisson-disk sampling.
+    This tile count difference is expected and intentional:
+    the condition exists to demonstrate a metric vulnerability, not for fair competition.
+  </p>
 
   <!-- 5. Experimental Setup -->
   <h2>5. Experimental Setup</h2>
   <p>
-    To evaluate the four conditions defined in Section 4,
+    To evaluate the five conditions defined in Section 4,
     we run a controlled experiment with {{ n_seeds }} random seeds.
-    All quality metrics are computed at $k = 1$ only, because the three metrics
-    ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$)
+    All quality metrics are computed at $k = 1$ only, because the metrics
+    ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $H_{\mathrm{angle}}$)
     depend solely on the primary angle $\phi_i$ of each tile
     and are therefore invariant to the kake count $k$.
     Representative images are rendered at $k = 1, 2, 3, 4$
@@ -410,11 +445,11 @@
 
   <table>
     <tr><th>Parameter</th><th>Value</th></tr>
-    <tr><td>Conditions</td><td>4 (poissonBfs, poissonRandom, randomBfs, randomRandom)</td></tr>
+    <tr><td>Conditions</td><td>5 (poissonBfs, poissonRandom, randomBfs, randomRandom, gridCheckerboard)</td></tr>
     <tr><td>$k$ (for metrics)</td><td>1</td></tr>
     <tr><td>$k$ (for images)</td><td>1, 2, 3, 4</td></tr>
     <tr><td>Seeds</td><td>0&ndash;{{ n_seeds - 1 }} ({{ n_seeds }} seeds)</td></tr>
-    <tr><td>Total runs</td><td>$4 \times {{ n_seeds }} + 4 \times 3 = {{ 4 * n_seeds + 12 }}$ (metrics + extra images)</td></tr>
+    <tr><td>Total runs</td><td>$5 \times {{ n_seeds }} + 5 \times 3 = {{ 5 * n_seeds + 15 }}$ (metrics + extra images)</td></tr>
     <tr><td>Region</td><td>$[0, 0, 6, 6]$</td></tr>
     <tr><td>Tile size</td><td>0.6</td></tr>
     <tr><td>Pitch</td><td>0.08</td></tr>
@@ -432,7 +467,7 @@
   </p>
   <p>
     <strong>Adjacency consistency.</strong>
-    All four conditions use Voronoi adjacency (derived from Delaunay triangulation of tile centres)
+    All five conditions use Voronoi adjacency (derived from Delaunay triangulation of tile centres)
     for both BFS optimisation and metric evaluation.
     This ensures that the adjacency graph over which the BFS greedy algorithm maximises contrast
     is identical to the graph used to compute $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$.
@@ -441,7 +476,7 @@
   <!-- 6. Results -->
   <h2>6. Results</h2>
   <p>
-    We present the experimental results using the three quality metrics defined in Section 3.
+    We present the experimental results using the six quality metrics defined in Section 3.
     All metrics are computed at $k = 1$.
     Section 6.1 shows box plots, Section 6.2 provides summary statistics,
     Section 6.3 presents the statistical analysis (two-way ANOVA and effect sizes),
@@ -450,15 +485,16 @@
 
   <h3>6.1 Quality Metrics</h3>
 
-  {% for metric in ['eContrast', 'eLdG', 'sOrder', 'cCov', 'uVor'] %}
+  {% for metric in ['eContrast', 'eLdG', 'sOrder', 'hAngle', 'cCov', 'uVor'] %}
   <figure>
     <img src="assets/boxplot_{{ metric }}.png" alt="Box plot of {{ metric }}" />
     <figcaption>
       {% if metric == 'eContrast' %}Figure 2: $E_{\mathrm{contrast}}$ distribution across conditions ($k = 1$, {{ n_seeds }} seeds).
       {% elif metric == 'eLdG' %}Figure 3: $E_{\mathrm{LdG}}$ distribution. Values above 0.5 indicate anti-ferromagnetic ordering beyond random.
       {% elif metric == 'sOrder' %}Figure 4: Scalar order parameter $S$. Lower values indicate better angular isotropy.
-      {% elif metric == 'cCov' %}Figure 5: Coverage ratio $C_{\mathrm{cov}}$. Higher values mean less visible background.
-      {% else %}Figure 6: Voronoi cell area CV $U_{\mathrm{vor}}$. Lower values indicate more uniform tile spacing.{% endif %}
+      {% elif metric == 'hAngle' %}Figure 5: Angle entropy $H_{\mathrm{angle}}$. Higher values indicate more diverse angle usage. The Grid + Checkerboard condition scores notably low ($\approx 0.28$) due to using only two angles.
+      {% elif metric == 'cCov' %}Figure 6: Coverage ratio $C_{\mathrm{cov}}$. Higher values mean less visible background.
+      {% else %}Figure 7: Voronoi cell area CV $U_{\mathrm{vor}}$. Lower values indicate more uniform tile spacing.{% endif %}
     </figcaption>
   </figure>
   {% endfor %}
@@ -467,7 +503,8 @@
   <p>
     Cells with a <span style="background: var(--color-best); padding: 0.1em 0.3em;">green background</span>
     indicate the best-performing condition for that metric
-    (highest for $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$; lowest for $S$).
+    (highest for $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, and $H_{\mathrm{angle}}$;
+    lowest for $S$).
     All metrics computed at $k = 1$.
   </p>
 
@@ -477,6 +514,7 @@
       <th>$E_{\mathrm{contrast}}$</th>
       <th>$E_{\mathrm{LdG}}$</th>
       <th>$S$</th>
+      <th>$H_{\mathrm{angle}}$</th>
       <th>$C_{\mathrm{cov}}$</th>
       <th>$U_{\mathrm{vor}}$</th>
       <th>Tiles</th>
@@ -488,6 +526,7 @@
       <td{% if best_cells.get('E_contrast') == row.condition %} class="best"{% endif %}>{{ row.E_contrast }}</td>
       <td{% if best_cells.get('E_LdG') == row.condition %} class="best"{% endif %}>{{ row.E_LdG }}</td>
       <td{% if best_cells.get('S') == row.condition %} class="best"{% endif %}>{{ row.S }}</td>
+      <td{% if best_cells.get('H_angle') == row.condition %} class="best"{% endif %}>{{ row.H_angle }}</td>
       <td{% if best_cells.get('C_cov') == row.condition %} class="best"{% endif %}>{{ row.C_cov }}</td>
       <td{% if best_cells.get('U_vor') == row.condition %} class="best"{% endif %}>{{ row.U_vor }}</td>
       <td>{{ row["nTiles (mean)"] }}</td>
@@ -500,12 +539,15 @@
   <p>
     To rigorously assess the effects of tile placement and angle assignment,
     we perform a two-way ANOVA (Type II) with placement and angle as fixed factors.
+    The ANOVA uses only the original four 2&times;2 factorial conditions
+    (gridCheckerboard is excluded as it does not belong to the factorial design).
     We report $F$-statistics, $p$-values, and effect sizes ($\eta^2 = SS_{\mathrm{effect}} / SS_{\mathrm{total}}$).
-    Post-hoc pairwise comparisons use Tukey HSD at $\alpha = 0.05$.
+    Pairwise comparisons (Tukey HSD at $\alpha = 0.05$ and Cohen's $d$)
+    are computed across all five conditions (10 pairs).
   </p>
 
   {% for metric_plain, rows in anova_data.items() %}
-  <h4>ANOVA: ${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('E_LdG', 'E_{\\mathrm{LdG}}') }}$</h4>
+  <h4>ANOVA: ${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('E_LdG', 'E_{\\mathrm{LdG}}').replace('H_angle', 'H_{\\mathrm{angle}}').replace('C_cov', 'C_{\\mathrm{cov}}').replace('U_vor', 'U_{\\mathrm{vor}}') }}$</h4>
   <table>
     <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
     {% for row in rows %}
@@ -528,7 +570,7 @@
   </p>
 
   {% for metric_plain, pairs in effect_data.items() %}
-  <h4>${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('E_LdG', 'E_{\\mathrm{LdG}}') }}$</h4>
+  <h4>${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('E_LdG', 'E_{\\mathrm{LdG}}').replace('H_angle', 'H_{\\mathrm{angle}}').replace('C_cov', 'C_{\\mathrm{cov}}').replace('U_vor', 'U_{\\mathrm{vor}}') }}$</h4>
   <table>
     <tr><th>Pair</th><th>Cohen's $d$</th></tr>
     {% for pair in pairs %}
@@ -594,8 +636,8 @@
 
   <h3>7.3 k-Invariance of Quality Metrics</h3>
   <p>
-    An important property of all five quality metrics is their invariance to the kake count $k$.
-    All five metrics &mdash; $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ &mdash;
+    An important property of all six quality metrics is their invariance to the kake count $k$.
+    All six metrics &mdash; $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $H_{\mathrm{angle}}$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ &mdash;
     depend only on the primary angle $\phi_i$ of each tile,
     which is determined entirely by the tile placement and angle assignment strategies.
     The secondary strokes added for $k \geq 2$ (at fixed angular offsets of 45&deg;, 90&deg;, etc.)
@@ -631,7 +673,41 @@
     <li>The 360-candidate grid for BFS is a discretisation; finer grids or continuous optimisation may improve results marginally.</li>
     <li>The quality metrics are $k$-invariant: they capture only primary-angle structure and cannot evaluate the visual contribution of secondary hatch layers (see Section 7.3).</li>
     <li>All conditions use Voronoi adjacency derived from Delaunay triangulation of tile centres. This ensures consistency between the BFS optimisation graph and metric evaluation, but other adjacency definitions (e.g. $k$-nearest-neighbours or radius-based) remain unexplored.</li>
+    <li>The Grid + Checkerboard condition uses a different tile count (100 vs. ~69) than the Poisson-disk conditions due to its regular grid spacing. This prevents direct quantitative comparison of spatial metrics but does not affect its role as a metric-vulnerability demonstration (see Section 7.7).</li>
   </ul>
+
+  <h3>7.7 The Checkerboard Problem and Angle Entropy</h3>
+  <p>
+    The Grid + Checkerboard condition demonstrates a fundamental vulnerability
+    in the original five-metric framework ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
+    By placing tiles on a regular grid and alternating between just two angles (0&deg; and 90&deg;),
+    the checkerboard achieves near-optimal scores on all five metrics simultaneously:
+    perfect edge contrast (every neighbour differs by 90&deg;),
+    maximum $E_{\mathrm{LdG}}$ (all $\sin^2$ terms equal 1),
+    low $S$ (the two symmetric angles cancel in the order parameter),
+    full coverage ($C_{\mathrm{cov}} \approx 1$),
+    and zero spatial variation ($U_{\mathrm{vor}} = 0$).
+  </p>
+  <p>
+    Yet the resulting pattern is visually mechanical and repetitive &mdash;
+    clearly inferior to the organic, varied appearance produced by the Poisson + BFS algorithm.
+    The angle entropy $H_{\mathrm{angle}}$ resolves this discrepancy:
+    the checkerboard uses only 2 of 12 angle bins,
+    yielding $H_{\mathrm{angle}} \approx \ln 2 / \ln 12 \approx 0.28$,
+    far below the BFS conditions ($H_{\mathrm{angle}} \approx 0.95$+).
+    This confirms that angle diversity &mdash; using a rich variety of orientations, not just two &mdash;
+    is essential for natural-looking kakeami,
+    and that $H_{\mathrm{angle}}$ captures a quality dimension the other metrics miss.
+  </p>
+  <p>
+    Note that the gridCheckerboard condition uses 100 tiles (10&times;10 grid)
+    compared to ~69 tiles for Poisson-disk conditions.
+    This tile count difference does not affect the validity of the metric comparison:
+    the purpose of this condition is to expose the metric vulnerability,
+    not to compete on equal footing with stochastic conditions.
+    The zero-variance box plots for gridCheckerboard (identical results across all seeds)
+    further emphasise its deterministic, non-natural character.
+  </p>
 
   <!-- 8. Future Work -->
   <h2>8. Future Work</h2>

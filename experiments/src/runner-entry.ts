@@ -18,6 +18,7 @@ export interface ExperimentResult {
   sOrder: number;
   cCov: number;
   uVor: number;
+  hAngle: number;
   wallTimeMs: number;
   svgString: string;
 }
@@ -60,6 +61,7 @@ function runExperiment(
     sOrder: config.sOrder(),
     cCov: config.cCov(),
     uVor: config.uVor(),
+    hAngle: config.hAngle(),
     wallTimeMs,
     svgString,
   };

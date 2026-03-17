@@ -192,3 +192,49 @@ describe('KakeamiConfig.uVor', () => {
     expect(config.uVor()).toBeGreaterThan(0);
   });
 });
+
+describe('KakeamiConfig.hAngle', () => {
+  it('returns 0 for empty tiles', () => {
+    const config = new KakeamiConfig([], [0, 0, 2, 2], 1, 1, 0.5);
+    expect(config.hAngle()).toBe(0);
+  });
+
+  it('returns 0 when all angles are identical', () => {
+    const tiles = Array.from({ length: 10 }, () =>
+      new Tile(0, 0, Block.standard(0, 1, 0.05)),
+    );
+    const config = new KakeamiConfig(tiles, [0, 0, 2, 2], 1, 1, 0.5);
+    expect(config.hAngle()).toBeCloseTo(0);
+  });
+
+  it('returns ≈1.0 for uniform distribution across 12 bins', () => {
+    // Place one tile per bin: angles at bin centres
+    const tiles = Array.from({ length: 12 }, (_, i) =>
+      new Tile(0, 0, Block.standard((i + 0.5) * PI / 12, 1, 0.05)),
+    );
+    const config = new KakeamiConfig(tiles, [0, 0, 2, 2], 1, 1, 0.5);
+    expect(config.hAngle()).toBeCloseTo(1.0, 2);
+  });
+
+  it('returns ≈log(2)/log(12) for two angles (0 and π/2)', () => {
+    const tiles = [
+      new Tile(0, 0, Block.standard(0, 1, 0.05)),
+      new Tile(1, 0, Block.standard(PI / 2, 1, 0.05)),
+    ];
+    const config = new KakeamiConfig(tiles, [0, 0, 2, 2], 1, 1, 0.5);
+    const expected = Math.log(2) / Math.log(12);
+    expect(config.hAngle()).toBeCloseTo(expected, 2);
+  });
+
+  it('is k-invariant (same value for k=1 and k=3)', () => {
+    const tiles1 = Array.from({ length: 12 }, (_, i) =>
+      new Tile(0, 0, Block.standard((i + 0.5) * PI / 12, 1, 0.05)),
+    );
+    const tiles3 = Array.from({ length: 12 }, (_, i) =>
+      new Tile(0, 0, Block.standard((i + 0.5) * PI / 12, 3, 0.05)),
+    );
+    const config1 = new KakeamiConfig(tiles1, [0, 0, 2, 2], 1, 1, 0.5);
+    const config3 = new KakeamiConfig(tiles3, [0, 0, 2, 2], 1, 1, 0.5);
+    expect(config1.hAngle()).toBeCloseTo(config3.hAngle(), 10);
+  });
+});

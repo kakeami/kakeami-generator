@@ -245,4 +245,24 @@ export class KakeamiConfig {
     const std = Math.sqrt(sumSq / (n - 1));
     return std / mean;
   }
+
+  /** Normalised Shannon entropy of primary-angle distribution H_angle ∈ [0, 1]. */
+  hAngle(nBins: number = 12): number {
+    const n = this.tiles.length;
+    if (n === 0) return 0;
+    const counts = new Array<number>(nBins).fill(0);
+    for (const t of this.tiles) {
+      const bin = Math.min(Math.floor(t.phi / PI * nBins), nBins - 1);
+      counts[bin]!++;
+    }
+    let h = 0;
+    for (let i = 0; i < nBins; i++) {
+      const c = counts[i]!;
+      if (c > 0) {
+        const p = c / n;
+        h -= p * Math.log(p);
+      }
+    }
+    return Math.log(nBins) > 0 ? h / Math.log(nBins) : 0;
+  }
 }

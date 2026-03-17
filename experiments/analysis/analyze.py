@@ -29,20 +29,24 @@ OUTPUT_DIR = ROOT / "public" / "experiments"
 ASSETS_DIR = OUTPUT_DIR / "assets"
 OUTPUT_IMAGES_DIR = OUTPUT_DIR / "images"
 
-CONDITIONS = ["poissonBfs", "poissonRandom", "randomBfs", "randomRandom"]
+CONDITIONS = ["poissonBfs", "poissonRandom", "randomBfs", "randomRandom", "gridCheckerboard"]
 CONDITION_LABELS = {
     "poissonBfs": "Poisson + BFS",
     "poissonRandom": "Poisson + Random",
     "randomBfs": "Random + BFS",
     "randomRandom": "Random + Random",
+    "gridCheckerboard": "Grid + Checkerboard",
 }
-METRICS = ["eContrast", "eLdG", "sOrder", "cCov", "uVor"]
+# Original 4 conditions for 2×2 ANOVA (gridCheckerboard is outside the factorial design)
+ANOVA_CONDITIONS = ["poissonBfs", "poissonRandom", "randomBfs", "randomRandom"]
+METRICS = ["eContrast", "eLdG", "sOrder", "cCov", "uVor", "hAngle"]
 METRIC_LABELS = {
     "eContrast": r"$E_{\mathrm{contrast}}$",
     "eLdG": r"$E_{\mathrm{LdG}}$",
     "sOrder": r"$S$",
     "cCov": r"$C_{\mathrm{cov}}$",
     "uVor": r"$U_{\mathrm{vor}}$",
+    "hAngle": r"$H_{\mathrm{angle}}$",
 }
 METRIC_LABELS_PLAIN = {
     "eContrast": "E_contrast",
@@ -50,14 +54,16 @@ METRIC_LABELS_PLAIN = {
     "sOrder": "S",
     "cCov": "C_cov",
     "uVor": "U_vor",
+    "hAngle": "H_angle",
 }
-# For E_contrast, E_LdG, C_cov: higher is better; for S, U_vor: lower is better
+# For E_contrast, E_LdG, C_cov, H_angle: higher is better; for S, U_vor: lower is better
 METRIC_HIGHER_IS_BETTER = {
     "eContrast": True,
     "eLdG": True,
     "sOrder": False,
     "cCov": True,
     "uVor": False,
+    "hAngle": True,
 }
 
 
@@ -79,7 +85,7 @@ def plot_boxplots(df: pd.DataFrame) -> None:
         labels = [CONDITION_LABELS[c] for c in CONDITIONS]
 
         bp = ax.boxplot(data, tick_labels=labels, patch_artist=True, widths=0.6)
-        colors = ["#4C72B0", "#55A868", "#C44E52", "#8172B2"]
+        colors = ["#4C72B0", "#55A868", "#C44E52", "#8172B2", "#CCB974"]
         for patch, color in zip(bp["boxes"], colors):
             patch.set_facecolor(color)
             patch.set_alpha(0.7)
@@ -127,9 +133,9 @@ def summary_table(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def two_way_anova(df: pd.DataFrame) -> dict:
-    """Two-way ANOVA: placement × angle for each metric. Returns dict of DataFrames."""
-    # Decode conditions into factors
-    df = df.copy()
+    """Two-way ANOVA: placement × angle for each metric (original 4 conditions only)."""
+    # Filter to the 4 conditions that belong to the 2×2 factorial design
+    df = df[df["condition"].isin(ANOVA_CONDITIONS)].copy()
     df["placement"] = df["condition"].map(
         lambda c: "Poisson" if c.startswith("poisson") else "Random"
     )
@@ -149,7 +155,7 @@ def two_way_anova(df: pd.DataFrame) -> dict:
 
 
 def compute_effect_sizes(df: pd.DataFrame) -> dict:
-    """Pairwise Cohen's d (pooled SD) for all 6 condition pairs per metric."""
+    """Pairwise Cohen's d (pooled SD) for all 10 condition pairs per metric."""
     results = {}
     for metric in METRICS:
         pairs = []
