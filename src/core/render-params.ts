@@ -2,6 +2,17 @@
  * Rendering parameters — independent of the mathematical model.
  */
 
+export type LineStyle = 'solid' | 'dashed' | 'dotted' | 'dash-dot' | 'dash-dot-dot' | 'long-dash';
+
+export const LINE_STYLES: readonly { value: LineStyle; label: string }[] = [
+  { value: 'solid', label: 'Solid' },
+  { value: 'dashed', label: 'Dashed' },
+  { value: 'dotted', label: 'Dotted' },
+  { value: 'dash-dot', label: 'Dash-dot' },
+  { value: 'dash-dot-dot', label: 'Dash-dot-dot' },
+  { value: 'long-dash', label: 'Long dash' },
+] as const;
+
 export interface RenderParams {
   margin: number;
   noiseAngle: number;
@@ -13,6 +24,7 @@ export interface RenderParams {
   lineColor: string;
   bgHatching: boolean;
   bgHatchingAngle: number;
+  lineStyle: LineStyle;
 }
 
 export function defaultRenderParams(): RenderParams {
@@ -27,5 +39,6 @@ export function defaultRenderParams(): RenderParams {
     lineColor: 'black',
     bgHatching: true,
     bgHatchingAngle: Math.PI / 4,
+    lineStyle: 'solid',
   };
 }

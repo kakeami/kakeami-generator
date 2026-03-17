@@ -6,11 +6,27 @@
  *   renderToSvg()      — builds the SVG element
  */
 
-import type { KakeamiConfig, RenderParams, Point2D, Segment } from '../core';
+import type { KakeamiConfig, RenderParams, Point2D, Segment, LineStyle } from '../core';
 import { tilePolygon, hatchPolygon, createRng, defaultRenderParams, kakeAngleOffsets } from '../core';
 import type { HatchedTile, RenderResult } from './types';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** Base dash patterns (scaled by lineWeight * strokeScale at render time). */
+const DASH_PATTERNS: Record<LineStyle, readonly number[] | null> = {
+  'solid': null,
+  'dashed': [8, 6],
+  'dotted': [2, 4],
+  'dash-dot': [8, 4, 2, 4],
+  'dash-dot-dot': [8, 4, 2, 4, 2, 4],
+  'long-dash': [16, 6],
+};
+
+function dashArray(lineStyle: LineStyle, scale: number): string | null {
+  const pattern = DASH_PATTERNS[lineStyle];
+  if (!pattern) return null;
+  return pattern.map(v => v * scale).join(',');
+}
 
 /**
  * Compute hatch data for all tiles (DOM-independent).
@@ -132,6 +148,8 @@ export function renderToSvg(
         line.setAttribute('stroke', fullParams.lineColor);
         line.setAttribute('stroke-width', String(bgWeight * strokeScale));
         line.setAttribute('stroke-linecap', 'round');
+        const bgDash = dashArray(fullParams.lineStyle, bgWeight * strokeScale);
+        if (bgDash) line.setAttribute('stroke-dasharray', bgDash);
         bgGroup.appendChild(line);
       }
     }
@@ -161,6 +179,8 @@ export function renderToSvg(
       line.setAttribute('stroke', fullParams.lineColor);
       line.setAttribute('stroke-width', String(ht.lineWeight * strokeScale));
       line.setAttribute('stroke-linecap', 'round');
+      const tileDash = dashArray(fullParams.lineStyle, ht.lineWeight * strokeScale);
+      if (tileDash) line.setAttribute('stroke-dasharray', tileDash);
       g.appendChild(line);
     }
 

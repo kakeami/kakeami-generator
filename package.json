@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "experiment:patterns": "npx tsx experiments/scripts/generate-pattern-svgs.ts",
     "experiment:run": "npx vite build && npx tsx experiments/scripts/run-experiments.ts",
     "experiment:analyze": "python experiments/analysis/analyze.py",
     "experiment": "npm run experiment:run && npm run experiment:analyze"

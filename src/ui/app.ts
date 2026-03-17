@@ -2,8 +2,8 @@
  * Application wiring: controls → voronoiColoring → renderToSvg → preview.
  */
 
-import { voronoiColoring, defaultRenderParams } from '../core';
-import type { RenderParams } from '../core';
+import { voronoiColoring, defaultRenderParams, LINE_STYLES } from '../core';
+import type { RenderParams, LineStyle } from '../core';
 import { renderToSvg } from '../render/svg-renderer';
 import { downloadSvg, downloadPng } from '../render/exporter';
 import { presets } from './presets';
@@ -171,6 +171,40 @@ function createColorPicker(
   container.appendChild(row);
 }
 
+function createSelect(
+  label: string, key: string,
+  options: readonly { value: string; label: string }[],
+  getValue: () => string,
+  setValue: (v: string) => void,
+  container: HTMLElement,
+) {
+  const row = document.createElement('div');
+  row.className = 'control-row';
+
+  const lbl = document.createElement('label');
+  lbl.textContent = label;
+  lbl.htmlFor = `select-${key}`;
+
+  const select = document.createElement('select');
+  select.id = `select-${key}`;
+  for (const opt of options) {
+    const option = document.createElement('option');
+    option.value = opt.value;
+    option.textContent = opt.label;
+    select.appendChild(option);
+  }
+  select.value = getValue();
+
+  select.addEventListener('change', () => {
+    setValue(select.value);
+    debouncedRender();
+  });
+
+  row.appendChild(lbl);
+  row.appendChild(select);
+  container.appendChild(row);
+}
+
 function createFieldset(title: string, container: HTMLElement): HTMLFieldSetElement {
   const fieldset = document.createElement('fieldset');
   const legend = document.createElement('legend');
@@ -228,6 +262,9 @@ function buildControls(container: HTMLElement) {
   createColorPicker('Line color', 'lineColor',
     () => rp().lineColor === 'black' ? '#000000' : rp().lineColor,
     v => { rp().lineColor = v; }, styleFs);
+  createSelect('Line style', 'lineStyle', LINE_STYLES,
+    () => rp().lineStyle,
+    v => { rp().lineStyle = v as LineStyle; }, styleFs);
   createCheckbox('Show outline', 'showOutline',
     () => rp().showOutline, v => { rp().showOutline = v; }, styleFs);
 }
