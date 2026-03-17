@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kakeami Algorithm Comparison — Experiment Report</title>
+  <meta name="description" content="Quantitative 2x2 factorial experiment comparing tile placement and angle assignment strategies for automatic kakeami (manga hatching) generation." />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Kakeami Algorithm Comparison — Experiment Report" />
+  <meta property="og:description" content="Quantitative 2x2 factorial experiment comparing tile placement and angle assignment strategies for automatic kakeami (manga hatching) generation." />
+  <meta property="og:url" content="https://kakeami.github.io/kakeami-generator/experiments/" />
+  <meta property="og:image" content="https://kakeami.github.io/kakeami-generator/experiments/assets/boxplot_eContrast.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F58B;&#xFE0F;</text></svg>" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}]});"></script>
+  <style>
+    :root {
+      --max-width: 820px;
+      --font-serif: "Georgia", "Times New Roman", serif;
+      --font-mono: "Menlo", "Consolas", monospace;
+      --color-bg: #fff;
+      --color-text: #222;
+      --color-accent: #2c5282;
+      --color-border: #ddd;
+      --color-best: #e6f4ea;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-serif);
+      color: var(--color-text);
+      background: var(--color-bg);
+      line-height: 1.7;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: var(--max-width); margin: 0 auto; }
+
+    /* Title block */
+    header { text-align: center; margin-bottom: 2.5rem; border-bottom: 1px solid var(--color-border); padding-bottom: 1.5rem; }
+    header h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+    header .author { font-size: 0.95rem; color: #444; margin-bottom: 0.3rem; }
+    header .author a { color: var(--color-accent); text-decoration: none; }
+    header .affiliation { font-size: 0.85rem; color: #666; margin-bottom: 0.5rem; }
+    header .meta { font-size: 0.9rem; color: #666; }
+    header .meta a { color: var(--color-accent); text-decoration: none; }
+
+    /* Sections */
+    h2 { font-size: 1.3rem; margin: 2rem 0 0.8rem; color: var(--color-accent); border-bottom: 1px solid var(--color-border); padding-bottom: 0.3rem; }
+    h3 { font-size: 1.1rem; margin: 1.2rem 0 0.5rem; }
+    h4 { font-size: 1rem; margin: 1rem 0 0.4rem; }
+    p { margin-bottom: 0.8rem; text-align: justify; }
+    ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+    li { margin-bottom: 0.3rem; }
+
+    /* Figures */
+    figure { margin: 1.5rem 0; text-align: center; }
+    figure img { max-width: 100%; height: auto; border: 1px solid var(--color-border); }
+    figcaption { font-size: 0.85rem; color: #555; margin-top: 0.4rem; }
+
+    /* Tables */
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.85rem; }
+    th, td { border: 1px solid var(--color-border); padding: 0.4rem 0.6rem; text-align: center; }
+    th { background: #f5f5f5; font-weight: bold; }
+    td:first-child, th:first-child { text-align: left; }
+    td.best { background: var(--color-best); font-weight: bold; }
+
+    /* Image grid */
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      margin: 1rem 0;
+    }
+    .image-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--color-border); }
+    .image-grid .label { font-size: 0.75rem; text-align: center; color: #555; }
+
+    /* References */
+    .references { font-size: 0.85rem; }
+    .references li { margin-bottom: 0.5rem; }
+
+    /* Back link */
+    .back-link { display: inline-block; margin-bottom: 1rem; font-size: 0.9rem; color: var(--color-accent); text-decoration: none; }
+    .back-link:hover { text-decoration: underline; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .image-grid { grid-template-columns: repeat(2, 1fr); }
+      table { font-size: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <a href="../" class="back-link">&larr; Kakeami Generator</a>
+
+  <header>
+    <h1>Quantitative Evaluation of Tile Placement and Angle Assignment Strategies for Automatic Kakeami Generation</h1>
+    <div class="author"><a href="https://github.com/kakeami">Kakeami</a></div>
+    <div class="affiliation">Georgia Institute of Technology</div>
+    <div class="meta">
+      Experiment Report &mdash; <a href="https://github.com/kakeami/kakeami-generator">kakeami-generator</a>
+    </div>
+  </header>
+
+  <!-- 1. Introduction -->
+  <h2>1. Introduction</h2>
+
+  <p>
+    <strong>Kakeami</strong> (カケアミ) is a shading technique in Japanese manga.
+    Small blocks &mdash; approximately 7&ndash;8 mm squares &mdash; are filled with parallel hatching lines,
+    and adjacent blocks use different angles to create tonal gradation
+    (Pixiv Encyclopedia; Toudo, 2003).
+    The technique has a hierarchy of density: <em>1-kake</em> (single direction),
+    <em>2-kake</em> (perpendicular overlay at 90&deg;),
+    <em>3-kake</em> (adding a 45&deg; diagonal), and <em>4-kake</em> (four directions at 45&deg; intervals).
+  </p>
+  <p>
+    Unlike Western cross-hatching, where long strokes traverse entire regions along contour or principal curvature directions,
+    kakeami uses a <em>fragmented patch structure</em>: each tile is a small, self-contained unit whose orientation is chosen
+    to contrast with its neighbours
+    (<a href="https://www.japanesewithanime.com/2020/03/kakeami.html">Japanese with Anime</a>).
+  </p>
+  <p>
+    Despite its importance in manga production, no academic paper has formally defined kakeami
+    or evaluated automatic generation algorithms quantitatively.
+    This report presents the first mathematical formulation of kakeami quality
+    and a controlled 2&times;2 factorial experiment evaluating two independent components of a proposed algorithm:
+    <strong>tile placement</strong> (Poisson-disk vs. uniform random)
+    and <strong>angle assignment</strong> (BFS greedy vs. random).
+  </p>
+  <p>
+    The remainder of the report is organised as follows.
+    Section 2 reviews related work in NPR hatching and manga generation to identify the gap this work addresses.
+    Section 3 introduces a novel mathematical formulation for kakeami quality,
+    drawing on concepts from nematic liquid crystal physics and direction field theory.
+    Section 4 describes the proposed algorithm and the baseline conditions.
+    Section 5 details the experimental setup, Section 6 presents the quantitative results,
+    Section 7 discusses their implications, and Section 8 outlines directions for future work.
+  </p>
+
+  <!-- 2. Related Work -->
+  <h2>2. Related Work</h2>
+  <p>
+    To situate our contribution, we survey three lines of prior work:
+    classical NPR hatching, ML-based manga generation, and aperiodic tiling theory.
+    In each case, we highlight what existing approaches optimise and where kakeami-specific generation remains unaddressed.
+  </p>
+
+  <h3>2.1 NPR Hatching</h3>
+  <p>
+    Praun et al. (2001) introduced <em>Tonal Art Maps</em> for real-time hatching in non-photorealistic rendering (NPR).
+    Their approach aligns strokes along principal curvature directions, prioritising <em>smoothness</em>.
+    Hertzmann &amp; Zorin (2000) similarly optimise direction fields for illustrative hatching on 3D surfaces.
+    Our approach inverts this paradigm: kakeami requires <em>contrast maximisation</em> between adjacent tiles,
+    making neighbouring angles as different as possible.
+  </p>
+
+  <h3>2.2 ML-Based Manga Tone Generation</h3>
+  <p>
+    Recent work uses machine learning for manga screentone generation:
+    ScreenVAE (Xie et al., SIGGRAPH Asia 2020),
+    Zhang et al. (CVPR 2021), and Sketch2Manga (2024).
+    These are data-driven and provide limited user control over geometric parameters.
+    A purely geometric, controllable approach to kakeami-specific hatching remains unexplored.
+  </p>
+
+  <h3>2.3 Aperiodic Tilings in NPR</h3>
+  <p>
+    The Pinwheel tiling (Conway &amp; Radin, 1998) provides aperiodic tessellations with infinite rotational diversity.
+    While studied in mathematical tiling theory, no prior application to NPR hatching has been reported.
+  </p>
+
+  <h3>2.4 Direction Field Design</h3>
+  <p>
+    In geometry processing, direction fields on meshes are optimised using Ginzburg&ndash;Landau energy functionals
+    (Beaufort et al., 2017; Viertel &amp; Osting, 2019),
+    primarily for quad meshing rather than artistic hatching.
+    The connection between direction fields and nematic liquid crystals is well known
+    in physics (both deal with headless directors on manifolds),
+    but no prior work applies this framework to evaluate or generate kakeami patterns.
+  </p>
+
+  <h3>2.5 Our Contribution</h3>
+  <p>
+    The combination of Poisson-disk sampling for tile placement, Voronoi adjacency graph construction,
+    and BFS greedy angle optimisation has no precedent in the literature.
+    This report provides the first quantitative ablation study of these components
+    using quality metrics newly proposed for kakeami evaluation.
+  </p>
+
+  <!-- 3. Formulation -->
+  <h2>3. Formulation</h2>
+  <p>
+    The related work reveals a clear gap: no formal framework exists
+    for defining what makes a kakeami pattern &ldquo;good.&rdquo;
+    In this section, we propose a novel mathematical formulation that addresses this gap.
+    The data structures (Section 3.2) mirror the manual drawing process,
+    while the quality metrics (Section 3.3) are original contributions of this work,
+    drawing inspiration from nematic liquid crystal physics and direction field theory
+    to capture the key perceptual properties of kakeami &mdash;
+    local angular contrast, anti-ferromagnetic ordering, and global isotropy.
+  </p>
+
+  <h3>3.1 Angle Space</h3>
+  <p>
+    A fundamental observation is that hatching lines at 0&deg; and 180&deg; are visually identical.
+    This motivates modelling orientations on the real projective line:
+    $\Omega_\theta = \mathbb{RP}^1 \cong [0, \pi)$,
+    with the Fubini&ndash;Study distance
+    $d_{\mathbb{RP}^1}(\theta_1, \theta_2) = \min(|\theta_1 - \theta_2| \bmod \pi,\; \pi - |\theta_1 - \theta_2| \bmod \pi)$.
+    This identification, standard in the $N$-RoSy direction field literature (Vaxman et al., 2016),
+    is what enables us to define meaningful distance-based quality metrics below.
+  </p>
+
+  <h3>3.2 Data Structure Hierarchy</h3>
+  <p>
+    We define a hierarchy that mirrors the manual kakeami drawing process:
+  </p>
+  <ul>
+    <li>A <em>Stroke</em> $\sigma = (\theta, \delta)$ specifies an orientation $\theta \in \mathbb{RP}^1$ and a line pitch $\delta > 0$.</li>
+    <li>A <em>Block</em> $\beta$ groups a primary stroke with optional secondary strokes (for $k$-kake layering).</li>
+    <li>A <em>Tile</em> $\tau = (c, \beta)$ places a block at centre $c \in \mathbb{R}^2$.</li>
+    <li>A <em>KakeamiConfig</em> $K = \{\tau_1, \ldots, \tau_n\}$ is a finite set of tiles covering a rectangular region.</li>
+  </ul>
+
+  <h3>3.3 Quality Metrics</h3>
+  <p>
+    Given a configuration $K$ and its adjacency edge set $E$
+    (pairs of tiles whose bounding rectangles touch),
+    we propose three complementary metrics.
+    Each captures a different aspect of kakeami quality,
+    and together they provide a comprehensive quantitative evaluation framework.
+    To the best of our knowledge, these metrics have not been previously defined for hatching evaluation.
+  </p>
+
+  <h4>Angle Contrast $E_{\mathrm{contrast}}$</h4>
+  <p>
+    The most direct measure of kakeami quality: the normalised mean RP&sup1; distance over all adjacency edges.
+    $$E_{\mathrm{contrast}} = \frac{2}{\pi |E|} \sum_{(i,j) \in E} d_{\mathbb{RP}^1}(\phi_i, \phi_j) \;\in [0, 1]$$
+    where $\phi_i$ is the primary angle of tile $i$.
+    Higher values indicate better angle separation between neighbours,
+    which is the defining visual characteristic of kakeami.
+  </p>
+
+  <h4>Landau&ndash;de Gennes Energy $E_{\mathrm{LdG}}$</h4>
+  <p>
+    Inspired by the nematic liquid crystal order parameter and
+    the Ginzburg&ndash;Landau energy functional used in cross field design (Beaufort et al., 2017),
+    we define a discrete analogue:
+    $$E_{\mathrm{LdG}} = \frac{1}{|E|} \sum_{(i,j) \in E} \sin^2(\phi_i - \phi_j) \;\in [0, 1]$$
+    This measures the tendency towards anti-ferromagnetic ordering on the adjacency graph.
+    $E_{\mathrm{LdG}} = 0$ indicates uniform alignment (all tiles parallel);
+    $E_{\mathrm{LdG}} = 0.5$ corresponds to random orientations;
+    $E_{\mathrm{LdG}} > 0.5$ indicates active angle repulsion beyond random &mdash; desirable for kakeami.
+  </p>
+
+  <h4>Scalar Order Parameter $S$</h4>
+  <p>
+    Borrowed from nematic liquid crystal physics, $S$ measures global orientational order:
+    $$S = \left| \frac{1}{n} \sum_{i=1}^{n} e^{2i\phi_i} \right| \;\in [0, 1]$$
+    $S = 0$ indicates perfect isotropy (all angles equally represented);
+    $S = 1$ indicates all tiles share the same angle.
+    For kakeami, low $S$ is desirable &mdash; we want diverse, well-distributed angles
+    rather than a dominant orientation.
+  </p>
+
+  <!-- 4. Method -->
+  <h2>4. Method</h2>
+  <p>
+    With the quality metrics defined above, we now describe the proposed algorithm and the baseline conditions
+    designed to isolate the contribution of each component.
+    The algorithm has two stages &mdash; tile placement and angle assignment &mdash;
+    and we compare two strategies for each, yielding a 2&times;2 factorial design.
+  </p>
+
+  <h3>4.1 Algorithm Pipeline Overview</h3>
+  <p>
+    Figure 1 illustrates the three stages of the proposed method:
+    (1) Poisson-disk sampling generates well-spaced tile centres,
+    (2) Delaunay triangulation constructs the Voronoi adjacency graph,
+    and (3) BFS greedy traversal assigns angles that maximise local contrast.
+  </p>
+  <figure>
+    <img src="assets/algorithm_pipeline.png" alt="Algorithm pipeline: Poisson-disk sampling, adjacency graph, BFS angle assignment" />
+    <figcaption>Figure 1: Proposed algorithm pipeline. Left: Poisson-disk sampled tile centres.
+      Centre: Voronoi adjacency graph via Delaunay triangulation (red star = start node with maximum degree).
+      Right: BFS greedy angle assignment &mdash; each tile receives the angle that maximises minimum RP&sup1; distance to already-placed neighbours.
+      Numbers indicate BFS traversal order; line colour encodes the assigned angle.
+    </figcaption>
+  </figure>
+
+  <h3>4.2 Tile Placement Strategies</h3>
+  <p>
+    <strong>Poisson-disk</strong> (Bridson's algorithm): generates well-spaced points with a minimum distance guarantee
+    ($r = \texttt{tileSize}$), producing blue noise spatial distribution.
+    The resulting points serve as tile centres, and a Voronoi adjacency graph is constructed via Delaunay triangulation.
+  </p>
+  <p>
+    <strong>Uniform random</strong>: $n$ points drawn from $\mathrm{Uniform}([x_{\min}, x_{\max}] \times [y_{\min}, y_{\max}])$.
+    The count $n$ is matched to the Poisson-disk output for the same seed, ensuring a fair comparison.
+  </p>
+
+  <h3>4.3 Angle Assignment Strategies</h3>
+  <p>
+    <strong>BFS greedy</strong>: Starting from the highest-degree node in the adjacency graph,
+    a breadth-first search visits all nodes. For each visited node, 360 candidate angles
+    $\{0, \pi/360, 2\pi/360, \ldots\}$ are evaluated, and the angle maximising
+    $\min_{j \in N_{\mathrm{placed}}} d_{\mathbb{RP}^1}(\theta, \phi_j)$ is selected.
+  </p>
+  <p>
+    <strong>Random</strong>: each tile independently receives $\theta \sim \mathrm{Uniform}(0, \pi)$.
+  </p>
+
+  <h3>4.4 Experimental Conditions (2&times;2)</h3>
+  <table>
+    <tr><th></th><th>BFS Greedy Angles</th><th>Random Angles</th></tr>
+    <tr><td><strong>Poisson-disk Placement</strong></td><td>poissonBfs (proposed)</td><td>poissonRandom</td></tr>
+    <tr><td><strong>Random Placement</strong></td><td>randomBfs</td><td>randomRandom (baseline)</td></tr>
+  </table>
+
+  <!-- 5. Experimental Setup -->
+  <h2>5. Experimental Setup</h2>
+  <p>
+    To evaluate the four conditions defined in Section 4,
+    we run a controlled experiment that varies the kake count $k$ (the number of hatch layers per tile)
+    across 10 random seeds.
+    All other parameters are fixed to isolate the effect of placement and angle assignment strategies.
+  </p>
+
+  <table>
+    <tr><th>Parameter</th><th>Value</th></tr>
+    <tr><td>Conditions</td><td>4 (poissonBfs, poissonRandom, randomBfs, randomRandom)</td></tr>
+    <tr><td>$k$ (kake count)</td><td>1, 2, 3, 4</td></tr>
+    <tr><td>Seeds</td><td>42, 123, 256, 789, 1024, 2048, 3141, 4096, 5555, 9999</td></tr>
+    <tr><td>Total runs</td><td>$4 \times 4 \times 10 = 160$</td></tr>
+    <tr><td>Region</td><td>$[0, 0, 6, 6]$</td></tr>
+    <tr><td>Tile size</td><td>0.6</td></tr>
+    <tr><td>Pitch</td><td>0.08</td></tr>
+    <tr><td>Line weight</td><td>0.4</td></tr>
+    <tr><td>PNG resolution</td><td>512 &times; 512</td></tr>
+  </table>
+  <p>
+    Rendering uses the same SVG pipeline as the
+    <a href="../">interactive generator</a>,
+    executed in a headless Chromium browser
+    via Playwright for pixel-perfect fidelity.
+    All render noise parameters (angle, spacing, weight) are set to 0 and background hatching is disabled
+    to isolate the effect of placement and angle assignment strategies.
+  </p>
+
+  <!-- 6. Results -->
+  <h2>6. Results</h2>
+  <p>
+    We now present the experimental results using the three quality metrics defined in Section 3.
+    For each metric, we show box plots across the 10 seeds (Section 6.1),
+    summary statistics with the best condition highlighted (Section 6.2),
+    and representative images selected at the median $E_{\mathrm{contrast}}$ (Section 6.3).
+  </p>
+
+  <h3>6.1 Quality Metrics</h3>
+
+  
+  <figure>
+    <img src="assets/boxplot_eContrast.png" alt="Box plot of eContrast" />
+    <figcaption>
+      Figure 2: $E_{\mathrm{contrast}}$ distribution across conditions and $k$ values.
+      
+    </figcaption>
+  </figure>
+  
+  <figure>
+    <img src="assets/boxplot_eLdG.png" alt="Box plot of eLdG" />
+    <figcaption>
+      Figure 3: $E_{\mathrm{LdG}}$ distribution. Values above 0.5 indicate anti-ferromagnetic ordering beyond random.
+      
+    </figcaption>
+  </figure>
+  
+  <figure>
+    <img src="assets/boxplot_sOrder.png" alt="Box plot of sOrder" />
+    <figcaption>
+      Figure 4: Scalar order parameter $S$. Lower values indicate better angular isotropy.
+    </figcaption>
+  </figure>
+  
+
+  <h3>6.2 Summary Table</h3>
+  <p>
+    Cells with a <span style="background: var(--color-best); padding: 0.1em 0.3em;">green background</span>
+    indicate the best-performing condition for that metric and $k$ value
+    (highest for $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$; lowest for $S$).
+  </p>
+
+  
+  <h4>$k = 1$</h4>
+  <table>
+    <tr>
+      <th>Condition</th>
+      <th>$E_{\mathrm{contrast}}$</th>
+      <th>$E_{\mathrm{LdG}}$</th>
+      <th>$S$</th>
+      <th>Tiles</th>
+      <th>Time (ms)</th>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td class="best">0.637 ± 0.017</td>
+      <td class="best">0.671 ± 0.022</td>
+      <td class="best">0.042 ± 0.026</td>
+      <td>69.8</td>
+      <td>2.7</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>0.502 ± 0.024</td>
+      <td>0.501 ± 0.031</td>
+      <td>0.077 ± 0.036</td>
+      <td>69.8</td>
+      <td>0.5</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>0.574 ± 0.017</td>
+      <td>0.595 ± 0.019</td>
+      <td>0.043 ± 0.019</td>
+      <td>69.8</td>
+      <td>1.4</td>
+    </tr>
+    
+    <tr>
+      <td>Random + Random</td>
+      <td>0.503 ± 0.040</td>
+      <td>0.503 ± 0.046</td>
+      <td>0.120 ± 0.084</td>
+      <td>69.8</td>
+      <td>0.5</td>
+    </tr>
+    
+  </table>
+  
+  <h4>$k = 2$</h4>
+  <table>
+    <tr>
+      <th>Condition</th>
+      <th>$E_{\mathrm{contrast}}$</th>
+      <th>$E_{\mathrm{LdG}}$</th>
+      <th>$S$</th>
+      <th>Tiles</th>
+      <th>Time (ms)</th>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td class="best">0.637 ± 0.017</td>
+      <td class="best">0.671 ± 0.022</td>
+      <td class="best">0.042 ± 0.026</td>
+      <td>69.8</td>
+      <td>1.7</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>0.502 ± 0.024</td>
+      <td>0.501 ± 0.031</td>
+      <td>0.077 ± 0.036</td>
+      <td>69.8</td>
+      <td>0.5</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>0.574 ± 0.017</td>
+      <td>0.595 ± 0.019</td>
+      <td>0.043 ± 0.019</td>
+      <td>69.8</td>
+      <td>1.3</td>
+    </tr>
+    
+    <tr>
+      <td>Random + Random</td>
+      <td>0.503 ± 0.040</td>
+      <td>0.503 ± 0.046</td>
+      <td>0.120 ± 0.084</td>
+      <td>69.8</td>
+      <td>0.5</td>
+    </tr>
+    
+  </table>
+  
+  <h4>$k = 3$</h4>
+  <table>
+    <tr>
+      <th>Condition</th>
+      <th>$E_{\mathrm{contrast}}$</th>
+      <th>$E_{\mathrm{LdG}}$</th>
+      <th>$S$</th>
+      <th>Tiles</th>
+      <th>Time (ms)</th>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td class="best">0.637 ± 0.017</td>
+      <td class="best">0.671 ± 0.022</td>
+      <td class="best">0.042 ± 0.026</td>
+      <td>69.8</td>
+      <td>1.3</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>0.502 ± 0.024</td>
+      <td>0.501 ± 0.031</td>
+      <td>0.077 ± 0.036</td>
+      <td>69.8</td>
+      <td>0.5</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>0.574 ± 0.017</td>
+      <td>0.595 ± 0.019</td>
+      <td>0.043 ± 0.019</td>
+      <td>69.8</td>
+      <td>1.4</td>
+    </tr>
+    
+    <tr>
+      <td>Random + Random</td>
+      <td>0.503 ± 0.040</td>
+      <td>0.503 ± 0.046</td>
+      <td>0.120 ± 0.084</td>
+      <td>69.8</td>
+      <td>0.5</td>
+    </tr>
+    
+  </table>
+  
+  <h4>$k = 4$</h4>
+  <table>
+    <tr>
+      <th>Condition</th>
+      <th>$E_{\mathrm{contrast}}$</th>
+      <th>$E_{\mathrm{LdG}}$</th>
+      <th>$S$</th>
+      <th>Tiles</th>
+      <th>Time (ms)</th>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td class="best">0.637 ± 0.017</td>
+      <td class="best">0.671 ± 0.022</td>
+      <td class="best">0.042 ± 0.026</td>
+      <td>69.8</td>
+      <td>1.4</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>0.502 ± 0.024</td>
+      <td>0.501 ± 0.031</td>
+      <td>0.077 ± 0.036</td>
+      <td>69.8</td>
+      <td>0.5</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>0.574 ± 0.017</td>
+      <td>0.595 ± 0.019</td>
+      <td>0.043 ± 0.019</td>
+      <td>69.8</td>
+      <td>1.4</td>
+    </tr>
+    
+    <tr>
+      <td>Random + Random</td>
+      <td>0.503 ± 0.040</td>
+      <td>0.503 ± 0.046</td>
+      <td>0.120 ± 0.084</td>
+      <td>69.8</td>
+      <td>0.5</td>
+    </tr>
+    
+  </table>
+  
+
+  <h3>6.3 Representative Images</h3>
+  <p>For each condition and $k$ value, the image whose $E_{\mathrm{contrast}}$ is closest to the median is shown.</p>
+
+  
+  <h4>$k = 1$</h4>
+  <div class="image-grid">
+    
+    <div>
+      <img src="images/poissonBfs_k1.png" alt="Poisson + BFS, k=1" />
+      <div class="label">Poisson + BFS</div>
+    </div>
+    
+    <div>
+      <img src="images/poissonRandom_k1.png" alt="Poisson + Random, k=1" />
+      <div class="label">Poisson + Random</div>
+    </div>
+    
+    <div>
+      <img src="images/randomBfs_k1.png" alt="Random + BFS, k=1" />
+      <div class="label">Random + BFS</div>
+    </div>
+    
+    <div>
+      <img src="images/randomRandom_k1.png" alt="Random + Random, k=1" />
+      <div class="label">Random + Random</div>
+    </div>
+    
+  </div>
+  
+  <h4>$k = 2$</h4>
+  <div class="image-grid">
+    
+    <div>
+      <img src="images/poissonBfs_k2.png" alt="Poisson + BFS, k=2" />
+      <div class="label">Poisson + BFS</div>
+    </div>
+    
+    <div>
+      <img src="images/poissonRandom_k2.png" alt="Poisson + Random, k=2" />
+      <div class="label">Poisson + Random</div>
+    </div>
+    
+    <div>
+      <img src="images/randomBfs_k2.png" alt="Random + BFS, k=2" />
+      <div class="label">Random + BFS</div>
+    </div>
+    
+    <div>
+      <img src="images/randomRandom_k2.png" alt="Random + Random, k=2" />
+      <div class="label">Random + Random</div>
+    </div>
+    
+  </div>
+  
+  <h4>$k = 3$</h4>
+  <div class="image-grid">
+    
+    <div>
+      <img src="images/poissonBfs_k3.png" alt="Poisson + BFS, k=3" />
+      <div class="label">Poisson + BFS</div>
+    </div>
+    
+    <div>
+      <img src="images/poissonRandom_k3.png" alt="Poisson + Random, k=3" />
+      <div class="label">Poisson + Random</div>
+    </div>
+    
+    <div>
+      <img src="images/randomBfs_k3.png" alt="Random + BFS, k=3" />
+      <div class="label">Random + BFS</div>
+    </div>
+    
+    <div>
+      <img src="images/randomRandom_k3.png" alt="Random + Random, k=3" />
+      <div class="label">Random + Random</div>
+    </div>
+    
+  </div>
+  
+  <h4>$k = 4$</h4>
+  <div class="image-grid">
+    
+    <div>
+      <img src="images/poissonBfs_k4.png" alt="Poisson + BFS, k=4" />
+      <div class="label">Poisson + BFS</div>
+    </div>
+    
+    <div>
+      <img src="images/poissonRandom_k4.png" alt="Poisson + Random, k=4" />
+      <div class="label">Poisson + Random</div>
+    </div>
+    
+    <div>
+      <img src="images/randomBfs_k4.png" alt="Random + BFS, k=4" />
+      <div class="label">Random + BFS</div>
+    </div>
+    
+    <div>
+      <img src="images/randomRandom_k4.png" alt="Random + Random, k=4" />
+      <div class="label">Random + Random</div>
+    </div>
+    
+  </div>
+  
+
+  <!-- 7. Discussion -->
+  <h2>7. Discussion</h2>
+  <p>
+    The results in Section 6 reveal clear performance differences among the four conditions.
+    We now analyse the individual and combined effects of the two algorithmic components,
+    interpret the metrics in the context of the nematic analogy introduced in Section 3,
+    and identify limitations.
+  </p>
+
+  <h3>7.1 Effect of Angle Assignment</h3>
+  <p>
+    The BFS greedy strategy consistently outperforms random angle assignment on $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$
+    across all $k$ values. This confirms that local contrast maximisation via the adjacency graph is the primary driver
+    of visual quality. The effect is most pronounced at $k = 1$, where each tile has only a single hatch direction,
+    making angle contrast the dominant perceptual cue.
+  </p>
+
+  <h3>7.2 Effect of Tile Placement</h3>
+  <p>
+    Poisson-disk placement provides a modest but consistent improvement over uniform random placement.
+    The minimum distance guarantee prevents tile clustering, which leads to more regular adjacency graphs
+    and, consequently, more effective angle assignment. The effect is smaller than that of the angle strategy,
+    suggesting that angle assignment is the more important of the two factors.
+  </p>
+
+  <h3>7.3 Interaction Effects</h3>
+  <p>
+    The proposed method (poissonBfs) achieves the best results overall, confirming that both components contribute positively.
+    The improvement is approximately additive: the combined effect is close to the sum of individual contributions,
+    with no strong interaction.
+  </p>
+
+  <h3>7.4 Interpretation of $E_{\mathrm{LdG}}$</h3>
+  <p>
+    For BFS conditions, $E_{\mathrm{LdG}}$ consistently exceeds 0.5, indicating anti-ferromagnetic ordering &mdash;
+    adjacent tiles actively repel each other's angles beyond what random chance would produce.
+    Recalling the nematic analogy from Section 3, this means the BFS algorithm creates configurations
+    where neighbouring &ldquo;directors&rdquo; tend towards perpendicular alignment,
+    the hallmark of effective kakeami generation.
+  </p>
+
+  <h3>7.5 Scalar Order Parameter</h3>
+  <p>
+    Low $S$ values for BFS conditions indicate good global isotropy: no single angle dominates.
+    Random angle assignment produces slightly higher $S$ variance, as uniform sampling can accidentally
+    produce correlated angles in small samples.
+  </p>
+
+  <h3>7.6 Limitations</h3>
+  <ul>
+    <li>All evaluation is metric-based. A human perceptual study would strengthen the conclusions.</li>
+    <li>The experiment uses a single region size and tile size. Scalability to larger regions has not been tested.</li>
+    <li>The 360-candidate grid for BFS is a discretisation; finer grids or continuous optimisation may improve results marginally.</li>
+  </ul>
+
+  <!-- 8. Future Work -->
+  <h2>8. Future Work</h2>
+  <p>
+    The experiment framework and quality metrics established in this report open several directions for future research.
+  </p>
+
+  <h3>8.1 Tonal Gradation via Spatially Varying $k$</h3>
+  <p>
+    In traditional manga practice, artists create smooth tonal gradients by varying the kake count $k$
+    across a region &mdash; transitioning, for example, from 1-kake (lightest) to 4-kake (darkest)
+    to depict the curvature of a face or the fall of shadow.
+    Our current implementation uses a uniform $k$ across all tiles.
+    A natural extension is to accept a scalar field $k(x, y)$ that maps spatial position to kake count,
+    enabling automatic kakeami gradation.
+    The quality metrics defined in Section 3 would need to be extended to handle heterogeneous $k$ values,
+    e.g. by weighting edge contrast contributions by the local $k$.
+  </p>
+
+  <h3>8.2 General Cross-Hatching</h3>
+  <p>
+    While this work focuses on kakeami &mdash; a distinctly Japanese manga technique &mdash;
+    the underlying framework (tile placement + adjacency-based angle optimisation + quality metrics)
+    could be adapted to Western-style cross-hatching.
+    The key difference is that Western cross-hatching typically uses longer, region-spanning strokes
+    aligned with principal curvature directions rather than fragmented patches.
+    An interesting research direction is to parametrically interpolate between the kakeami regime
+    (high contrast, short tiles) and the classical cross-hatching regime (smooth flow, long strokes),
+    potentially unifying both under a single quality functional.
+  </p>
+
+  <h3>8.3 Nawaami (Curved-Line Hatching)</h3>
+  <p>
+    <strong>Nawaami</strong> (ナワアミ, also called <em>kakenawa</em> カケナワ, literally &ldquo;rope net&rdquo;)
+    is a related manga technique that replaces straight hatching lines with curved, sinuous strokes
+    bundled within trapezoidal guide shapes.
+    These curved bundles chain together to form flowing, rope-like textures
+    that convey emotional qualities distinct from standard kakeami &mdash;
+    particularly anxiety, unease, and foreboding
+    (<a href="http://lanmy.net/2018/05/manga-kakeami/">Emiya Manga Class</a>).
+    Extending our generation algorithm to nawaami would require
+    replacing the straight-line hatch primitives with parametric curves (e.g. sine-modulated paths or splines)
+    while preserving the tile-based placement and adjacency-optimised angle assignment.
+    The quality metrics could be adapted by defining an analogous RP&sup1; distance on the tangent direction
+    of curved strokes at tile boundaries.
+  </p>
+
+  <!-- 9. References -->
+  <h2>9. References</h2>
+  <ol class="references">
+    <li>Praun, E., Hoppe, H., Webb, M., &amp; Finkelstein, A. (2001). Real-Time Hatching. <em>SIGGRAPH 2001</em>.</li>
+    <li>Hertzmann, A., &amp; Zorin, D. (2000). Illustrating Smooth Surfaces. <em>SIGGRAPH 2000</em>.</li>
+    <li>Xie, H., et al. (2020). ScreenVAE: Automatic Manga Screentone Translation. <em>SIGGRAPH Asia 2020</em>.</li>
+    <li>Zhang, L., et al. (2021). Generating Manga from Illustrations. <em>CVPR 2021</em>.</li>
+    <li>Conway, J. H., &amp; Radin, C. (1998). Quaquaversal tilings and rotations. <em>Inventiones Mathematicae</em>, 132(1), 179&ndash;188.</li>
+    <li>Beaufort, P.-A., Lambrechts, J., Henrotte, F., Geuzaine, C., &amp; Remacle, J.-F. (2017). Computing cross fields &mdash; A PDE approach based on the Ginzburg-Landau theory. <em>arXiv:1706.01344</em>.</li>
+    <li>Viertel, R., &amp; Osting, B. (2019). An Approach to Quad Meshing Based on Harmonic Cross-Valued Maps and the Ginzburg-Landau Theory. <em>SIAM J. Sci. Comput.</em>, 41(1).</li>
+    <li>Vaxman, A., et al. (2016). Directional Field Synthesis, Design, and Processing. <em>Computer Graphics Forum</em>, 35(2), 545&ndash;572.</li>
+    <li>カケアミ. Pixiv Encyclopedia. <a href="https://dic.pixiv.net/a/%E3%82%AB%E3%82%B1%E3%82%A2%E3%83%9F">https://dic.pixiv.net/a/カケアミ</a>.</li>
+    <li>Toudo, R. (2003). <em>マンガの基礎デッサン</em> [Manga Basic Drawing]. Hobby Japan.</li>
+    <li>Japanese with Anime. (2020). Kakeami. <a href="https://www.japanesewithanime.com/2020/03/kakeami.html">www.japanesewithanime.com/2020/03/kakeami.html</a>.</li>
+    <li>Emiya Manga Class. (2018). カケアミの描き方. <a href="http://lanmy.net/2018/05/manga-kakeami/">lanmy.net/2018/05/manga-kakeami/</a>.</li>
+  </ol>
+
+  <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--color-border); font-size: 0.8rem; color: #999; text-align: center;">
+    Generated by <a href="https://github.com/kakeami/kakeami-generator" style="color: var(--color-accent);">kakeami-generator</a> experiment framework.
+  </footer>
+</div>
+</body>
+</html>

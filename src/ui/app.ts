@@ -319,6 +319,13 @@ export function initApp(root: HTMLElement) {
   buildControls(controlsContainer);
   panel.appendChild(controlsContainer);
 
+  // Link to experiment report
+  const navLink = document.createElement('a');
+  navLink.href = 'experiments/';
+  navLink.textContent = 'Experiment Report: Algorithm Comparison';
+  navLink.className = 'nav-link';
+  panel.appendChild(navLink);
+
   layout.appendChild(panel);
   root.appendChild(layout);
 

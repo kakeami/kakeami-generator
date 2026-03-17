@@ -14,4 +14,4 @@ export {
 export type { Segment } from './geometry';
 export { poissonDisk } from './poisson-disk';
 export { buildVoronoiAdjacency } from './adjacency';
-export { voronoiColoring } from './voronoi-coloring';
+export { bfsGreedyAngles, voronoiColoring } from './voronoi-coloring';

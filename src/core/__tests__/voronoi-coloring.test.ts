@@ -1,7 +1,60 @@
 import { describe, it, expect } from 'vitest';
-import { voronoiColoring } from '../voronoi-coloring';
+import { bfsGreedyAngles, voronoiColoring } from '../voronoi-coloring';
+import { createRng } from '../math-utils';
+import { dRp1 } from '../math-utils';
 
 const PI = Math.PI;
+
+describe('bfsGreedyAngles', () => {
+  it('returns correct length', () => {
+    const adj = [[1, 2], [0, 2], [0, 1]];
+    const rng = createRng(42);
+    const thetas = bfsGreedyAngles(3, adj, rng);
+    expect(thetas.length).toBe(3);
+  });
+
+  it('all angles are in [0, π)', () => {
+    const adj = [[1, 2], [0, 2], [0, 1]];
+    const rng = createRng(42);
+    const thetas = bfsGreedyAngles(3, adj, rng);
+    for (let i = 0; i < thetas.length; i++) {
+      expect(thetas[i]).toBeGreaterThanOrEqual(0);
+      expect(thetas[i]).toBeLessThan(PI + 1e-10);
+    }
+  });
+
+  it('maximises contrast between adjacent nodes', () => {
+    // Triangle graph: each node has 2 neighbours.
+    // BFS greedy should spread angles apart.
+    const adj = [[1, 2], [0, 2], [0, 1]];
+    const rng = createRng(42);
+    const thetas = bfsGreedyAngles(3, adj, rng);
+    // All pairwise RP¹ distances should be > 0
+    for (let i = 0; i < 3; i++) {
+      for (let j = i + 1; j < 3; j++) {
+        expect(dRp1(thetas[i]!, thetas[j]!)).toBeGreaterThan(0.1);
+      }
+    }
+  });
+
+  it('is deterministic with same seed', () => {
+    const adj = [[1, 2, 3], [0, 2], [0, 1, 3], [0, 2]];
+    const a = bfsGreedyAngles(4, adj, createRng(99));
+    const b = bfsGreedyAngles(4, adj, createRng(99));
+    for (let i = 0; i < 4; i++) {
+      expect(a[i]).toBe(b[i]);
+    }
+  });
+
+  it('handles isolated nodes', () => {
+    // Node 2 is isolated (no edges)
+    const adj = [[1], [0], []];
+    const rng = createRng(42);
+    const thetas = bfsGreedyAngles(3, adj, rng);
+    expect(thetas[2]).toBeGreaterThanOrEqual(0);
+    expect(thetas[2]).toBeLessThan(PI);
+  });
+});
 
 describe('voronoiColoring', () => {
   const region: [number, number, number, number] = [0, 0, 3, 3];

@@ -3,6 +3,7 @@
  */
 
 import { dRp1, createRng } from './math-utils';
+import type { Rng } from './math-utils';
 import { Block, Tile, KakeamiConfig } from './models';
 import { poissonDisk } from './poisson-disk';
 import { buildVoronoiAdjacency } from './adjacency';
@@ -10,42 +11,22 @@ import { buildVoronoiAdjacency } from './adjacency';
 const PI = Math.PI;
 
 /**
- * Generate a kakeami configuration using Voronoi coloring.
+ * BFS greedy angle assignment on an adjacency graph.
  *
- * @param region [xmin, ymin, xmax, ymax]
- * @param tileSize Minimum spacing for Poisson-disk sampling
- * @param k Kake count (1-4)
- * @param pitch Line spacing
- * @param lineWeight Stroke width
- * @param seed Random seed (null for random)
+ * Starting from the highest-degree node, assigns each tile an angle from 360
+ * candidates that maximises the minimum RP¹ distance to already-placed neighbours.
+ * Isolated nodes get a random angle from `rng`.
+ *
+ * @param n Number of nodes
+ * @param adj Adjacency list
+ * @param rng Seeded RNG (used only for isolated nodes)
+ * @returns Float64Array of angles in [0, π)
  */
-export function voronoiColoring(
-  region: [number, number, number, number],
-  tileSize: number,
-  k: number = 1,
-  pitch: number = 0.05,
-  lineWeight: number = 0.5,
-  seed: number | null = null,
-): KakeamiConfig {
-  const actualSeed = seed ?? Math.floor(Math.random() * 100000);
-  const rng = createRng(actualSeed);
-
-  // Poisson-disk sampling
-  const centers = poissonDisk(region, tileSize, rng);
-  const n = centers.length;
-
-  if (n === 0) {
-    return new KakeamiConfig([], region, tileSize, tileSize, lineWeight);
-  }
-
-  // Tile size expansion for coverage guarantee
-  let actualTileSize = tileSize * 1.4;
-  actualTileSize = Math.max(pitch, Math.round(actualTileSize / pitch) * pitch);
-
-  // Voronoi adjacency
-  const adj = buildVoronoiAdjacency(centers);
-
-  // BFS greedy angle assignment
+export function bfsGreedyAngles(
+  n: number,
+  adj: number[][],
+  rng: Rng,
+): Float64Array {
   const thetas = new Float64Array(n).fill(-1);
   const visited = new Uint8Array(n);
 
@@ -115,6 +96,48 @@ export function voronoiColoring(
       thetas[i] = rng.uniform(0, PI);
     }
   }
+
+  return thetas;
+}
+
+/**
+ * Generate a kakeami configuration using Voronoi coloring.
+ *
+ * @param region [xmin, ymin, xmax, ymax]
+ * @param tileSize Minimum spacing for Poisson-disk sampling
+ * @param k Kake count (1-4)
+ * @param pitch Line spacing
+ * @param lineWeight Stroke width
+ * @param seed Random seed (null for random)
+ */
+export function voronoiColoring(
+  region: [number, number, number, number],
+  tileSize: number,
+  k: number = 1,
+  pitch: number = 0.05,
+  lineWeight: number = 0.5,
+  seed: number | null = null,
+): KakeamiConfig {
+  const actualSeed = seed ?? Math.floor(Math.random() * 100000);
+  const rng = createRng(actualSeed);
+
+  // Poisson-disk sampling
+  const centers = poissonDisk(region, tileSize, rng);
+  const n = centers.length;
+
+  if (n === 0) {
+    return new KakeamiConfig([], region, tileSize, tileSize, lineWeight);
+  }
+
+  // Tile size expansion for coverage guarantee
+  let actualTileSize = tileSize * 1.4;
+  actualTileSize = Math.max(pitch, Math.round(actualTileSize / pitch) * pitch);
+
+  // Voronoi adjacency
+  const adj = buildVoronoiAdjacency(centers);
+
+  // BFS greedy angle assignment
+  const thetas = bfsGreedyAngles(n, adj, rng);
 
   const tiles = centers.map(([cx, cy], i) =>
     new Tile(cx, cy, Block.standard(thetas[i]!, k, pitch)),

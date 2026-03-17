@@ -8,13 +8,18 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "experiment:run": "npx vite build && npx tsx experiments/scripts/run-experiments.ts",
+    "experiment:analyze": "python experiments/analysis/analyze.py",
+    "experiment": "npm run experiment:run && npm run experiment:analyze"
   },
   "dependencies": {
     "d3-delaunay": "^6.0.4"
   },
   "devDependencies": {
     "@types/d3-delaunay": "^6.0.4",
+    "playwright": "^1.58.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "vite": "^6.2.0",
     "vitest": "^3.0.0"

@@ -155,6 +155,25 @@ legend {
   grid-column: 3;
 }
 
+.nav-link {
+  display: block;
+  margin-top: 16px;
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #f9f9f9;
+  color: #2c5282;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.nav-link:hover {
+  background: #e8eef6;
+  border-color: #2c5282;
+}
+
 @media (max-width: 768px) {
   .app-layout {
     flex-direction: column;
