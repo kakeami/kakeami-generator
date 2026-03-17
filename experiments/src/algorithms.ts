@@ -40,16 +40,19 @@ function uniformRandomPoints(
   return points;
 }
 
-/** Generate grid centres with checkerboard 0°/90° angles. */
+/**
+ * Generate grid centres with checkerboard 0°/90° angles.
+ * nPerSide = 8 yields 64 tiles, close to Poisson-disk's ~68.
+ */
 function gridCheckerboardCenters(
   region: Region,
-  tileSize: number,
+  nPerSide: number,
 ): { centers: [number, number][]; thetas: Float64Array } {
   const [xmin, ymin, xmax, ymax] = region;
   const regionWidth = xmax - xmin;
   const regionHeight = ymax - ymin;
-  const nCols = Math.floor(regionWidth / tileSize);
-  const nRows = Math.floor(regionHeight / tileSize);
+  const nCols = nPerSide;
+  const nRows = nPerSide;
   const stepX = regionWidth / nCols;
   const stepY = regionHeight / nRows;
   const centers: [number, number][] = [];
@@ -114,7 +117,7 @@ export function runCondition(
 ): KakeamiConfig {
   // gridCheckerboard is deterministic — no seed-dependent RNG needed
   if (condition === 'gridCheckerboard') {
-    const { centers, thetas } = gridCheckerboardCenters(region, tileSize);
+    const { centers, thetas } = gridCheckerboardCenters(region, 8);
     if (centers.length === 0) {
       return new KakeamiConfig([], region, tileSize, tileSize, lineWeight);
     }

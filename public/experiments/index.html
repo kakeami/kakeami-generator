@@ -174,7 +174,7 @@
     ($\eta^2 \approx 0.94$ for $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$),
     and the proposed Poisson-disk + BFS greedy combination achieves the best overall quality.
     The checkerboard reference condition demonstrates a metric vulnerability &mdash;
-    near-optimal scores on five of six metrics despite a visually mechanical pattern &mdash;
+    optimal scores on $S$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ despite a visually mechanical pattern &mdash;
     resolved by the angle entropy $H_{\mathrm{angle}}$,
     which penalises limited angle diversity ($H_{\mathrm{angle}} \approx 0.28$ vs. $\geq 0.95$ for BFS conditions).
   </p>
@@ -440,22 +440,22 @@
   <p>
     In addition to the 2&times;2 factorial conditions, we include a fifth condition:
     <strong>Grid + Checkerboard</strong> (<code>gridCheckerboard</code>).
-    Tiles are placed on a regular square grid with spacing equal to the tile size (0.6),
-    yielding $10 \times 10 = 100$ tiles in the $[0, 6]^2$ region.
+    Tiles are placed on an $8 \times 8$ regular square grid (spacing $= 6/8 = 0.75$),
+    yielding 64 tiles in the $[0, 6]^2$ region &mdash;
+    comparable to the ~69 tiles produced by Poisson-disk sampling.
     Angles alternate between 0&deg; and 90&deg; in a checkerboard pattern:
     tiles at even $(r + c)$ positions receive 0&deg;, odd positions receive 90&deg;.
     This condition is entirely deterministic (identical across all seeds)
     and serves to demonstrate the <em>checkerboard hack</em>:
-    a simple regular pattern that achieves near-optimal scores on
-    $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$
+    a simple regular pattern that achieves optimal scores on
+    $S$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$,
+    and competitive scores on $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$,
     while producing a visually mechanical, non-natural result.
     The angle entropy $H_{\mathrm{angle}}$ is specifically designed to penalise this configuration.
   </p>
   <p>
-    Note that gridCheckerboard uses 100 tiles (vs. ~69 for Poisson-disk conditions)
-    because it uses the natural grid spacing rather than Poisson-disk sampling.
-    This tile count difference is expected and intentional:
-    the condition exists to demonstrate a metric vulnerability, not for fair competition.
+    The $8 \times 8$ grid size was chosen to approximately match the Poisson-disk tile count (~69),
+    enabling fairer comparison of spatial metrics ($C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
   </p>
 
   <!-- 5. Experimental Setup -->
@@ -650,14 +650,14 @@
     
     <tr style="font-style: italic;">
       <td>Grid + Checkerboard&thinsp;*</td>
-      <td class="best">0.690 ± 0.000</td>
-      <td class="best">0.690 ± 0.000</td>
+      <td class="best">0.696 ± 0.000</td>
+      <td class="best">0.696 ± 0.000</td>
       <td class="best">0.000 ± 0.000</td>
       <td>0.279 ± 0.000</td>
       <td class="best">1.000 ± 0.000</td>
       <td class="best">0.000 ± 0.000</td>
-      <td>100.0</td>
-      <td>261.0</td>
+      <td>64.0</td>
+      <td>161.0</td>
     </tr>
     
   </table>
@@ -948,19 +948,19 @@
     
     <tr><td>Poisson + BFS vs Random + Random</td><td>8.509</td></tr>
     
-    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>-13.561</td></tr>
+    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>-15.193</td></tr>
     
     <tr><td>Poisson + Random vs Random + BFS</td><td>-7.714</td></tr>
     
     <tr><td>Poisson + Random vs Random + Random</td><td>-0.107</td></tr>
     
-    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>-10.538</td></tr>
+    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>-10.866</td></tr>
     
     <tr><td>Random + BFS vs Random + Random</td><td>8.570</td></tr>
     
-    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>-12.019</td></tr>
+    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>-13.516</td></tr>
     
-    <tr><td>Random + Random vs Grid + Checkerboard</td><td>-11.841</td></tr>
+    <tr><td>Random + Random vs Grid + Checkerboard</td><td>-12.215</td></tr>
     
   </table>
   
@@ -974,19 +974,19 @@
     
     <tr><td>Poisson + BFS vs Random + Random</td><td>8.684</td></tr>
     
-    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>-2.246</td></tr>
+    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>-3.260</td></tr>
     
     <tr><td>Poisson + Random vs Random + BFS</td><td>-7.799</td></tr>
     
     <tr><td>Poisson + Random vs Random + Random</td><td>-0.103</td></tr>
     
-    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>-8.606</td></tr>
+    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>-8.874</td></tr>
     
     <tr><td>Random + BFS vs Random + Random</td><td>8.729</td></tr>
     
-    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>-1.676</td></tr>
+    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>-2.601</td></tr>
     
-    <tr><td>Random + Random vs Grid + Checkerboard</td><td>-9.763</td></tr>
+    <tr><td>Random + Random vs Grid + Checkerboard</td><td>-10.072</td></tr>
     
   </table>
   
@@ -1267,11 +1267,11 @@
     The Grid + Checkerboard condition demonstrates a fundamental vulnerability
     in the original five-metric framework ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
     By placing tiles on a regular grid and alternating between just two angles (0&deg; and 90&deg;),
-    the checkerboard achieves near-optimal scores on all five metrics simultaneously:
-    perfect edge contrast (every neighbour differs by 90&deg;),
-    maximum $E_{\mathrm{LdG}}$ (all $\sin^2$ terms equal 1),
-    low $S$ (the two symmetric angles cancel in the order parameter),
-    full coverage ($C_{\mathrm{cov}} \approx 1$),
+    the checkerboard achieves optimal or competitive scores on most of these metrics:
+    orthogonal neighbours differ by the maximum 90&deg; (though Delaunay triangulation
+    adds diagonal edges between same-angle tiles, reducing $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$ below the theoretical maximum),
+    zero $S$ (the two symmetric angles cancel perfectly in the order parameter),
+    full coverage ($C_{\mathrm{cov}} = 1$),
     and zero spatial variation ($U_{\mathrm{vor}} = 0$).
   </p>
   <p>
@@ -1286,11 +1286,9 @@
     and that $H_{\mathrm{angle}}$ captures a quality dimension the other metrics miss.
   </p>
   <p>
-    Note that the gridCheckerboard condition uses 100 tiles (10&times;10 grid)
-    compared to ~69 tiles for Poisson-disk conditions.
-    This tile count difference does not affect the validity of the metric comparison:
-    the purpose of this condition is to expose the metric vulnerability,
-    not to compete on equal footing with stochastic conditions.
+    The gridCheckerboard condition uses 64 tiles (8&times;8 grid),
+    comparable to the ~69 tiles of Poisson-disk conditions,
+    enabling direct metric comparison.
     The zero-variance box plots for gridCheckerboard (identical results across all seeds)
     further emphasise its deterministic, non-natural character.
   </p>
@@ -1334,7 +1332,7 @@
     <li>The 360-candidate grid for BFS is a discretisation; finer grids or continuous optimisation may improve results marginally.</li>
     <li>The quality metrics are $k$-invariant: they capture only primary-angle structure and cannot evaluate the visual contribution of secondary hatch layers (see Section 7.6).</li>
     <li>All conditions use Voronoi adjacency derived from Delaunay triangulation of tile centres. This ensures consistency between the BFS optimisation graph and metric evaluation, but other adjacency definitions (e.g. $k$-nearest-neighbours or radius-based) remain unexplored.</li>
-    <li>The Grid + Checkerboard condition uses a different tile count (100 vs. ~69) than the Poisson-disk conditions due to its regular grid spacing. This prevents direct quantitative comparison of spatial metrics but does not affect its role as a metric-vulnerability demonstration (see Section 7.3).</li>
+    <li>The Grid + Checkerboard condition uses a slightly different tile count (64 vs. ~69) than the Poisson-disk conditions due to its regular grid spacing, though the difference (~7%) is small enough to permit direct metric comparison (see Section 7.3).</li>
   </ul>
 
   <!-- 8. Future Work -->
