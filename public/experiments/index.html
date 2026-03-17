@@ -5,6 +5,7 @@
   after your changes. Do not remove or renumber sections without updating
   this outline.
 
+  Abstract
   1. Introduction
   2. Related Work
      2.1 NPR Hatching
@@ -30,11 +31,11 @@
   7. Discussion
      7.1 Effect of Angle Assignment
      7.2 Effect of Tile Placement
-     7.3 k-Invariance of Quality Metrics
+     7.3 The Checkerboard Problem and Angle Entropy
      7.4 Interpretation of E_LdG
      7.5 Scalar Order Parameter
-     7.6 Limitations
-     7.7 The Checkerboard Problem and Angle Entropy
+     7.6 k-Invariance of Quality Metrics
+     7.7 Limitations
   8. Future Work
      8.1 Tonal Gradation via Spatially Varying k
      8.2 Generalisation to Arbitrary Pattern Tiles
@@ -43,7 +44,8 @@
      8.3 Nawaami (Curved-Line Hatching)
      8.4 Connection to Mathematical Tiling Problems
      8.5 k-Aware Quality Metrics
-  9. References
+  9. Conclusion
+  10. References
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -73,6 +75,7 @@
       --color-accent: #2c5282;
       --color-border: #ddd;
       --color-best: #e6f4ea;
+      --color-second-best: #f0f7e6;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -112,6 +115,7 @@
     th { background: #f5f5f5; font-weight: bold; }
     td:first-child, th:first-child { text-align: left; }
     td.best { background: var(--color-best); font-weight: bold; }
+    td.second-best { background: var(--color-second-best); }
 
     /* Image grid */
     .image-grid {
@@ -151,6 +155,30 @@
     </div>
   </header>
 
+  <!-- Abstract -->
+  <h2>Abstract</h2>
+  <p>
+    Kakeami is a traditional manga shading technique in which small rectangular tiles are filled
+    with parallel hatching lines at varying angles to create tonal gradation.
+    Despite its importance in manga production, no formal framework exists
+    for defining kakeami quality or evaluating automatic generation algorithms.
+    This report presents the first mathematical formulation of kakeami quality,
+    proposing six complementary metrics &mdash;
+    angle contrast ($E_{\mathrm{contrast}}$), Landau&ndash;de Gennes energy ($E_{\mathrm{LdG}}$),
+    scalar order parameter ($S$), angle entropy ($H_{\mathrm{angle}}$),
+    coverage ratio ($C_{\mathrm{cov}}$), and Voronoi cell area CV ($U_{\mathrm{vor}}$) &mdash;
+    drawing on concepts from nematic liquid crystal physics and direction field theory.
+    We conduct a controlled 2&times;2 factorial experiment (tile placement &times; angle assignment)
+    with 100 random seeds, supplemented by a deterministic grid-checkerboard reference condition.
+    Two-way ANOVA reveals that angle assignment is the dominant factor
+    ($\eta^2 \approx 0.94$ for $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$),
+    and the proposed Poisson-disk + BFS greedy combination achieves the best overall quality.
+    The checkerboard reference condition demonstrates a metric vulnerability &mdash;
+    near-optimal scores on five of six metrics despite a visually mechanical pattern &mdash;
+    resolved by the angle entropy $H_{\mathrm{angle}}$,
+    which penalises limited angle diversity ($H_{\mathrm{angle}} \approx 0.28$ vs. $\geq 0.95$ for BFS conditions).
+  </p>
+
   <!-- 1. Introduction -->
   <h2>1. Introduction</h2>
 
@@ -185,7 +213,8 @@
     Section 4 describes the proposed algorithm and the baseline conditions.
     Section 5 details the experimental setup, Section 6 presents the quantitative results
     including two-way ANOVA and effect size analysis,
-    Section 7 discusses their implications, and Section 8 outlines directions for future work.
+    Section 7 discusses their implications, Section 8 outlines directions for future work,
+    and Section 9 concludes.
   </p>
 
   <!-- 2. Related Work -->
@@ -472,6 +501,14 @@
     This ensures that the adjacency graph over which the BFS greedy algorithm maximises contrast
     is identical to the graph used to compute $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$.
   </p>
+  <p>
+    <strong>Software.</strong>
+    The generation pipeline is implemented in TypeScript 5.7 with Vite 6.2 as build tool
+    and d3-delaunay 6.0.4 for Voronoi/Delaunay computation.
+    Headless rendering uses Playwright 1.58.2 on Node.js 23.10.
+    Statistical analysis is performed in Python using
+    pandas, NumPy, SciPy, statsmodels, matplotlib, and Jinja2.
+  </p>
 
   <!-- 6. Results -->
   <h2>6. Results</h2>
@@ -484,6 +521,11 @@
   </p>
 
   <h3>6.1 Quality Metrics</h3>
+  <p>
+    <em>Note:</em> The Grid + Checkerboard condition is a deterministic reference configuration
+    that produces identical results across all seeds (zero variance in the box plots).
+    Its role as a metric-vulnerability demonstration is discussed in Section 7.3.
+  </p>
 
   
   <figure>
@@ -536,10 +578,12 @@
 
   <h3>6.2 Summary Table</h3>
   <p>
-    Cells with a <span style="background: var(--color-best); padding: 0.1em 0.3em;">green background</span>
-    indicate the best-performing condition for that metric
-    (highest for $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, and $H_{\mathrm{angle}}$;
-    lowest for $S$).
+    Cells with a <span style="background: var(--color-best); padding: 0.1em 0.3em;">dark green background</span>
+    indicate the best-performing condition for that metric;
+    cells with a <span style="background: var(--color-second-best); padding: 0.1em 0.3em;">light green background</span>
+    indicate the second-best condition.
+    Direction: higher is better for $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $H_{\mathrm{angle}}$, and $C_{\mathrm{cov}}$;
+    lower is better for $S$ and $U_{\mathrm{vor}}$.
     All metrics computed at $k = 1$.
   </p>
 
@@ -560,10 +604,10 @@
       <td>Poisson + BFS</td>
       <td>0.640 ± 0.005</td>
       <td>0.676 ± 0.008</td>
-      <td>0.042 ± 0.022</td>
+      <td class="second-best">0.042 ± 0.022</td>
       <td>0.960 ± 0.022</td>
-      <td>0.948 ± 0.010</td>
-      <td>0.240 ± 0.021</td>
+      <td class="second-best">0.948 ± 0.010</td>
+      <td class="second-best">0.240 ± 0.021</td>
       <td>68.8</td>
       <td>191.6</td>
     </tr>
@@ -582,8 +626,8 @@
     
     <tr>
       <td>Random + BFS</td>
-      <td>0.642 ± 0.006</td>
-      <td>0.679 ± 0.009</td>
+      <td class="second-best">0.642 ± 0.006</td>
+      <td class="second-best">0.679 ± 0.009</td>
       <td>0.042 ± 0.021</td>
       <td>0.959 ± 0.023</td>
       <td>0.749 ± 0.030</td>
@@ -597,15 +641,15 @@
       <td>0.500 ± 0.023</td>
       <td>0.500 ± 0.027</td>
       <td>0.103 ± 0.055</td>
-      <td>0.967 ± 0.015</td>
+      <td class="second-best">0.967 ± 0.015</td>
       <td>0.749 ± 0.030</td>
       <td>0.558 ± 0.073</td>
       <td>68.8</td>
       <td>192.1</td>
     </tr>
     
-    <tr>
-      <td>Grid + Checkerboard</td>
+    <tr style="font-style: italic;">
+      <td>Grid + Checkerboard&thinsp;*</td>
       <td class="best">0.690 ± 0.000</td>
       <td class="best">0.690 ± 0.000</td>
       <td class="best">0.000 ± 0.000</td>
@@ -617,6 +661,10 @@
     </tr>
     
   </table>
+  <p style="font-size: 0.85rem; color: #555;">
+    * Grid + Checkerboard is a deterministic reference condition outside the 2&times;2 factorial design.
+    Its role is discussed in Section 7.3.
+  </p>
 
   <h3>6.3 Statistical Analysis</h3>
   <p>
@@ -1179,10 +1227,12 @@
   <!-- 7. Discussion -->
   <h2>7. Discussion</h2>
   <p>
-    The results in Section 6 reveal clear performance differences among the four conditions.
-    We now analyse the individual and combined effects of the two algorithmic components
-    using the ANOVA results, interpret the metrics in the context of the nematic analogy
-    introduced in Section 3, and identify limitations.
+    The results in Section 6 reveal clear performance differences among the five conditions.
+    Sections 7.1&ndash;7.2 analyse the two factors of the 2&times;2 factorial design,
+    Section 7.3 examines the fifth condition (Grid + Checkerboard) and the metric vulnerability it exposes,
+    Sections 7.4&ndash;7.5 interpret individual metrics through the nematic liquid crystal analogy,
+    Section 7.6 discusses $k$-invariance of the metric framework,
+    and Section 7.7 identifies limitations.
   </p>
 
   <h3>7.1 Effect of Angle Assignment</h3>
@@ -1212,49 +1262,7 @@
     that the angular metrics alone cannot detect.
   </p>
 
-  <h3>7.3 k-Invariance of Quality Metrics</h3>
-  <p>
-    An important property of all six quality metrics is their invariance to the kake count $k$.
-    All six metrics &mdash; $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $H_{\mathrm{angle}}$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ &mdash;
-    depend only on the primary angle $\phi_i$ of each tile,
-    which is determined entirely by the tile placement and angle assignment strategies.
-    The secondary strokes added for $k \geq 2$ (at fixed angular offsets of 45&deg;, 90&deg;, etc.)
-    do not influence any of the metrics.
-  </p>
-  <p>
-    This $k$-invariance is a limitation of the current metric framework:
-    the metrics cannot distinguish between a $k = 1$ and $k = 4$ configuration
-    that share the same primary angles, even though they look very different visually.
-    We acknowledge this as a gap and propose $k$-aware metrics as future work (Section 8.4).
-  </p>
-
-  <h3>7.4 Interpretation of $E_{\mathrm{LdG}}$</h3>
-  <p>
-    For BFS conditions, $E_{\mathrm{LdG}}$ consistently exceeds 0.5, indicating anti-ferromagnetic ordering &mdash;
-    adjacent tiles actively repel each other's angles beyond what random chance would produce.
-    Recalling the nematic analogy from Section 3, this means the BFS algorithm creates configurations
-    where neighbouring &ldquo;directors&rdquo; tend towards perpendicular alignment,
-    the hallmark of effective kakeami generation.
-  </p>
-
-  <h3>7.5 Scalar Order Parameter</h3>
-  <p>
-    Low $S$ values for BFS conditions indicate good global isotropy: no single angle dominates.
-    Random angle assignment produces slightly higher $S$ variance, as uniform sampling can accidentally
-    produce correlated angles in small samples.
-  </p>
-
-  <h3>7.6 Limitations</h3>
-  <ul>
-    <li>All evaluation is metric-based. A human perceptual study would strengthen the conclusions.</li>
-    <li>The experiment uses a single region size and tile size. Scalability to larger regions has not been tested.</li>
-    <li>The 360-candidate grid for BFS is a discretisation; finer grids or continuous optimisation may improve results marginally.</li>
-    <li>The quality metrics are $k$-invariant: they capture only primary-angle structure and cannot evaluate the visual contribution of secondary hatch layers (see Section 7.3).</li>
-    <li>All conditions use Voronoi adjacency derived from Delaunay triangulation of tile centres. This ensures consistency between the BFS optimisation graph and metric evaluation, but other adjacency definitions (e.g. $k$-nearest-neighbours or radius-based) remain unexplored.</li>
-    <li>The Grid + Checkerboard condition uses a different tile count (100 vs. ~69) than the Poisson-disk conditions due to its regular grid spacing. This prevents direct quantitative comparison of spatial metrics but does not affect its role as a metric-vulnerability demonstration (see Section 7.7).</li>
-  </ul>
-
-  <h3>7.7 The Checkerboard Problem and Angle Entropy</h3>
+  <h3>7.3 The Checkerboard Problem and Angle Entropy</h3>
   <p>
     The Grid + Checkerboard condition demonstrates a fundamental vulnerability
     in the original five-metric framework ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
@@ -1286,6 +1294,48 @@
     The zero-variance box plots for gridCheckerboard (identical results across all seeds)
     further emphasise its deterministic, non-natural character.
   </p>
+
+  <h3>7.4 Interpretation of $E_{\mathrm{LdG}}$</h3>
+  <p>
+    For BFS conditions, $E_{\mathrm{LdG}}$ consistently exceeds 0.5, indicating anti-ferromagnetic ordering &mdash;
+    adjacent tiles actively repel each other's angles beyond what random chance would produce.
+    Recalling the nematic analogy from Section 3, this means the BFS algorithm creates configurations
+    where neighbouring &ldquo;directors&rdquo; tend towards perpendicular alignment,
+    the hallmark of effective kakeami generation.
+  </p>
+
+  <h3>7.5 Scalar Order Parameter</h3>
+  <p>
+    Low $S$ values for BFS conditions indicate good global isotropy: no single angle dominates.
+    Random angle assignment produces slightly higher $S$ variance, as uniform sampling can accidentally
+    produce correlated angles in small samples.
+  </p>
+
+  <h3>7.6 $k$-Invariance of Quality Metrics</h3>
+  <p>
+    An important property of all six quality metrics is their invariance to the kake count $k$.
+    All six metrics &mdash; $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $H_{\mathrm{angle}}$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ &mdash;
+    depend only on the primary angle $\phi_i$ of each tile,
+    which is determined entirely by the tile placement and angle assignment strategies.
+    The secondary strokes added for $k \geq 2$ (at fixed angular offsets of 45&deg;, 90&deg;, etc.)
+    do not influence any of the metrics.
+  </p>
+  <p>
+    This $k$-invariance is a limitation of the current metric framework:
+    the metrics cannot distinguish between a $k = 1$ and $k = 4$ configuration
+    that share the same primary angles, even though they look very different visually.
+    We acknowledge this as a gap and propose $k$-aware metrics as future work (Section 8.5).
+  </p>
+
+  <h3>7.7 Limitations</h3>
+  <ul>
+    <li>All evaluation is metric-based. A human perceptual study would strengthen the conclusions.</li>
+    <li>The experiment uses a single region size and tile size. Scalability to larger regions has not been tested.</li>
+    <li>The 360-candidate grid for BFS is a discretisation; finer grids or continuous optimisation may improve results marginally.</li>
+    <li>The quality metrics are $k$-invariant: they capture only primary-angle structure and cannot evaluate the visual contribution of secondary hatch layers (see Section 7.6).</li>
+    <li>All conditions use Voronoi adjacency derived from Delaunay triangulation of tile centres. This ensures consistency between the BFS optimisation graph and metric evaluation, but other adjacency definitions (e.g. $k$-nearest-neighbours or radius-based) remain unexplored.</li>
+    <li>The Grid + Checkerboard condition uses a different tile count (100 vs. ~69) than the Poisson-disk conditions due to its regular grid spacing. This prevents direct quantitative comparison of spatial metrics but does not affect its role as a metric-vulnerability demonstration (see Section 7.3).</li>
+  </ul>
 
   <!-- 8. Future Work -->
   <h2>8. Future Work</h2>
@@ -1331,7 +1381,7 @@
   </p>
   <figure>
     <img src="assets/pattern-stipple.svg" alt="Stipple (dot) pattern fill in rectangular tiles" style="max-width: 400px;" />
-    <figcaption>Figure 5: Stipple fill in rectangular tiles.
+    <figcaption>Figure 8: Stipple fill in rectangular tiles.
       Dots are placed along hatch-line positions; the directional alignment of dots encodes each tile&rsquo;s primary angle.
       Tile placement and angle assignment are identical to standard kakeami ($k = 2$, seed = 42).</figcaption>
   </figure>
@@ -1350,7 +1400,7 @@
   </p>
   <figure>
     <img src="assets/pattern-voronoi.svg" alt="Voronoi-cell tiles individually hatched" style="max-width: 400px;" />
-    <figcaption>Figure 6: Voronoi-cell tiles ($k = 1$).
+    <figcaption>Figure 9: Voronoi-cell tiles ($k = 1$).
       Each Voronoi cell is individually hatched at the angle assigned by the BFS greedy algorithm.
       Single-direction hatching makes the per-cell angle variation clearly visible.</figcaption>
   </figure>
@@ -1422,7 +1472,7 @@
 
   <h3>8.5 $k$-Aware Quality Metrics</h3>
   <p>
-    As discussed in Section 7.3, the current metrics are $k$-invariant &mdash;
+    As discussed in Section 7.6, the current metrics are $k$-invariant &mdash;
     they depend only on the primary angle and cannot evaluate the visual contribution
     of secondary hatch layers.
     Future work should develop metrics that capture $k$-dependent properties,
@@ -1432,8 +1482,28 @@
     between generated and reference kakeami patterns at each $k$ level).
   </p>
 
-  <!-- 9. References -->
-  <h2>9. References</h2>
+  <!-- 9. Conclusion -->
+  <h2>9. Conclusion</h2>
+  <p>
+    This report presented the first mathematical formulation of kakeami quality
+    and a controlled experiment evaluating tile placement and angle assignment strategies.
+    Six complementary metrics &mdash; four angular ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $H_{\mathrm{angle}}$)
+    and two spatial ($C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$) &mdash;
+    were proposed to capture the key perceptual properties of kakeami patterns.
+    The 2&times;2 factorial experiment with 100 seeds demonstrated that
+    angle assignment is the dominant factor ($\eta^2 \approx 0.94$),
+    while Poisson-disk placement provides superior spatial uniformity.
+    The proposed Poisson-disk + BFS greedy combination achieves the best overall quality.
+    The grid-checkerboard reference condition exposed a metric vulnerability
+    that motivated the introduction of angle entropy $H_{\mathrm{angle}}$,
+    completing the six-metric evaluation framework.
+    Future work includes tonal gradation via spatially varying $k$,
+    generalisation to arbitrary tile shapes and fill patterns,
+    and development of $k$-aware quality metrics.
+  </p>
+
+  <!-- 10. References -->
+  <h2>10. References</h2>
   <ol class="references">
     <li>Praun, E., Hoppe, H., Webb, M., &amp; Finkelstein, A. (2001). Real-Time Hatching. <em>SIGGRAPH 2001</em>.</li>
     <li>Hertzmann, A., &amp; Zorin, D. (2000). Illustrating Smooth Surfaces. <em>SIGGRAPH 2000</em>.</li>

@@ -116,6 +116,23 @@ def compute_best_cells(df: pd.DataFrame) -> dict:
     return best
 
 
+def compute_second_best_cells(df: pd.DataFrame) -> dict:
+    """For each metric, find the second-best condition. Returns {metric_plain: condition_label}."""
+    second_best = {}
+    for m in METRICS:
+        means = {}
+        for cond in CONDITIONS:
+            sub = df[df["condition"] == cond]
+            means[CONDITION_LABELS[cond]] = sub[m].mean()
+        if METRIC_HIGHER_IS_BETTER[m]:
+            sorted_conds = sorted(means, key=means.get, reverse=True)
+        else:
+            sorted_conds = sorted(means, key=means.get)
+        if len(sorted_conds) >= 2:
+            second_best[METRIC_LABELS_PLAIN[m]] = sorted_conds[1]
+    return second_best
+
+
 def summary_table(df: pd.DataFrame) -> pd.DataFrame:
     """Mean +/- SD for each condition x metric (single table, k=1 only)."""
     rows = []
@@ -397,6 +414,7 @@ def render_report(
     df: pd.DataFrame,
     summary: pd.DataFrame,
     best_cells: dict,
+    second_best_cells: dict,
     anova_results: dict,
     effect_sizes: dict,
     tukey_results: dict,
@@ -439,6 +457,7 @@ def render_report(
         condition_labels=CONDITION_LABELS,
         k_values=[1, 2, 3, 4],
         best_cells=best_cells,
+        second_best_cells=second_best_cells,
         metric_labels_plain=METRIC_LABELS_PLAIN,
         anova_data=anova_data,
         effect_data=effect_data,
@@ -464,6 +483,9 @@ def main() -> None:
     print("Computing best cells...")
     best_cells = compute_best_cells(df)
 
+    print("Computing second-best cells...")
+    second_best_cells = compute_second_best_cells(df)
+
     print("Running two-way ANOVA...")
     anova_results = two_way_anova(df)
     for metric, table in anova_results.items():
@@ -483,7 +505,7 @@ def main() -> None:
     generate_algorithm_illustration()
 
     print("Rendering report...")
-    render_report(df, summary, best_cells, anova_results, effect_sizes, tukey_results)
+    render_report(df, summary, best_cells, second_best_cells, anova_results, effect_sizes, tukey_results)
 
     print("Analysis complete!")
 
