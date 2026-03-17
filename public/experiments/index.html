@@ -787,42 +787,60 @@
 
   <h3>8.3 Generalisation to Arbitrary Pattern Tiles</h3>
   <p>
-    A key insight of this work is that the proposed algorithm is <em>pattern-agnostic</em>:
-    the Poisson-disk placement, Voronoi adjacency construction, and BFS greedy angle assignment
-    operate solely on tile centres and primary angles.
-    The fill content of each tile &mdash; i.e. what is drawn inside the rectangular region &mdash;
-    is independent of the placement and optimisation framework.
-    This means that replacing straight-line hatching with <em>any</em> oriented pattern
-    (zigzag, wave, stipple, cross, etc.) yields visually coherent results
-    while preserving the same quality metrics ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$).
+    A key insight of this work is that the proposed algorithm is <em>pattern-agnostic</em> along two independent axes:
+    the <strong>fill content</strong> drawn inside each tile, and the <strong>tile shape</strong> itself.
+    The Poisson-disk placement, Voronoi adjacency construction, and BFS greedy angle assignment
+    operate solely on tile centres and primary angles &mdash;
+    neither the rendering primitive nor the tile boundary geometry participates
+    in the optimisation.
+    This opens two complementary directions for generalisation.
   </p>
+
+  <h4>8.3.1 Non-Line Fill Patterns in Rectangular Tiles</h4>
   <p>
-    To demonstrate this, we generated two alternative pattern fills using the same configuration
-    ($k = 2$, seed = 42, region $[0, 6]^2$, tile size 0.6) as the experiment:
-    each straight-line segment is replaced by a parametric curve whose tangent direction
-    matches the original hatch angle.
-    Figure 5 shows zigzag fill (sawtooth deviation perpendicular to line direction)
-    and Figure 6 shows wave fill (sinusoidal deviation via cubic B&eacute;zier approximation).
-    In both cases, the tile layout and angle assignment are identical to the standard kakeami output;
-    only the rendering primitive differs.
+    The rectangular tile shape can be preserved while replacing straight-line hatching
+    with a fundamentally different fill primitive.
+    For example, placing dots along the hatch-line positions at regular intervals
+    produces a <em>stipple</em> pattern whose directional alignment reveals the tile&rsquo;s primary angle
+    without drawing any continuous line.
+    Other candidates include small crosses, short dashes, concentric arcs, or any oriented motif.
+    Because the fill is independent of the placement framework,
+    the same quality metrics ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$) remain valid:
+    they depend only on the primary angle $\phi_i$ of each tile,
+    not on how that angle is visually manifested inside the tile.
   </p>
   <figure>
-    <img src="assets/pattern-zigzag.svg" alt="Zigzag pattern fill kakeami" style="max-width: 400px;" />
-    <figcaption>Figure 5: Zigzag pattern fill. Each straight hatch segment is replaced by a sawtooth path.
-      The tile placement and angle assignment are identical to standard kakeami ($k = 2$, seed = 42).</figcaption>
+    <img src="assets/pattern-stipple.svg" alt="Stipple (dot) pattern fill in rectangular tiles" style="max-width: 400px;" />
+    <figcaption>Figure 5: Stipple fill in rectangular tiles.
+      Dots are placed along hatch-line positions; the directional alignment of dots encodes each tile&rsquo;s primary angle.
+      Tile placement and angle assignment are identical to standard kakeami ($k = 2$, seed = 42).</figcaption>
   </figure>
-  <figure>
-    <img src="assets/pattern-wave.svg" alt="Wave pattern fill kakeami" style="max-width: 400px;" />
-    <figcaption>Figure 6: Wave (sinusoidal) pattern fill using cubic B&eacute;zier curves.
-      The same voronoiColoring configuration produces a visually distinct texture
-      while maintaining the same quality metric values.</figcaption>
-  </figure>
+
+  <h4>8.3.2 Non-Rectangular Tile Shapes</h4>
   <p>
-    This generalisation suggests that the quality metrics and optimisation framework
-    introduced in this work are applicable beyond kakeami to a broader class of
-    <em>oriented tile-based texture synthesis</em> problems,
-    wherever a surface must be covered by small, directed pattern units
-    with maximal local contrast.
+    Independently of the fill content, the tile shape itself can be generalised.
+    Our algorithm already computes a Voronoi partition internally to determine tile adjacency;
+    the Voronoi cells themselves are natural, non-rectangular tile candidates.
+    Each Voronoi cell is an individual kakeami unit:
+    the BFS greedy algorithm assigns an angle to each cell,
+    and the cell polygon is hatched directly &mdash;
+    without grouping multiple non-rectangular shapes into a rectangular container.
+    Other tile geometries (regular hexagons, triangles, Penrose rhombi, etc.)
+    are equally viable, as long as an adjacency graph can be constructed.
+  </p>
+  <figure>
+    <img src="assets/pattern-voronoi.svg" alt="Voronoi-cell tiles individually hatched" style="max-width: 400px;" />
+    <figcaption>Figure 6: Voronoi-cell tiles.
+      Each Voronoi cell is individually hatched at the angle assigned by the BFS greedy algorithm.
+      The same tile centres, angles, and quality metrics as the standard rectangular-tile output ($k = 2$, seed = 42).</figcaption>
+  </figure>
+
+  <p>
+    Together, these two axes of generalisation suggest that the quality metrics and optimisation framework
+    introduced in this work are applicable to a broad class of
+    <em>oriented tile-based texture synthesis</em> problems &mdash;
+    any setting where a surface must be covered by directed pattern units
+    with maximal local angular contrast.
   </p>
 
   <h3>8.4 Connection to Mathematical Tiling Problems</h3>

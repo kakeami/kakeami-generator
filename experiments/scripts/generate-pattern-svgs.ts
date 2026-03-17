@@ -1,8 +1,9 @@
 /**
- * Generate example SVGs demonstrating pattern-agnostic tile filling.
+ * Generate example SVGs demonstrating two axes of generalisation:
+ *   1. Rectangular tiles + non-line fill (stipple/dot pattern)
+ *   2. Non-rectangular tiles (Voronoi cells) individually hatched
  *
- * Uses the same voronoiColoring + tilePolygon + hatchPolygon pipeline from core/,
- * but converts the straight-line segments into zigzag and wave patterns.
+ * Uses the same voronoiColoring pipeline from core/.
  * Outputs pure SVG strings (no DOM required).
  *
  * Usage:  npx tsx experiments/scripts/generate-pattern-svgs.ts
@@ -10,11 +11,20 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { Delaunay } from 'd3-delaunay';
 import {
   voronoiColoring,
   tilePolygon,
   hatchPolygon,
   kakeAngleOffsets,
+  poissonDisk,
+  buildVoronoiAdjacency,
+  bfsGreedyAngles,
+  createRng,
+  Stroke,
+  Block,
+  Tile,
+  KakeamiConfig,
 } from '../../src/core/index';
 import type { Segment, Point2D } from '../../src/core/index';
 
@@ -31,137 +41,71 @@ const width = xmax - xmin;
 const height = ymax - ymin;
 const strokeScale = Math.min(width, height) / 450;
 const sw = LINE_WEIGHT * strokeScale;
+const dotRadius = PITCH * 0.35;
 
-// --- Pattern converters ---
+// --- Generate standard kakeami config (used for both figures) ---
+const config = voronoiColoring(REGION, TILE_SIZE, K, PITCH, LINE_WEIGHT, SEED);
 
-/** Perpendicular unit vector for a segment. */
-function perpDir(p0: Point2D, p1: Point2D): Point2D {
+// =====================================================================
+// Figure 1: Rectangular tiles + stipple (dot) fill
+// =====================================================================
+
+/**
+ * Place dots along hatch lines within a polygon.
+ * Dots are placed at regular intervals along each hatch segment,
+ * so the dot alignment reveals the tile's primary angle.
+ */
+function stippleSegment(seg: Segment, spacing: number, r: number): string[] {
+  const [p0, p1] = seg;
   const dx = p1[0] - p0[0];
   const dy = p1[1] - p0[1];
   const len = Math.hypot(dx, dy);
-  if (len === 0) return [0, 0];
-  return [-dy / len, dx / len];
-}
+  if (len < 1e-9) return [];
 
-/** Lerp between two points. */
-function lerp(a: Point2D, b: Point2D, t: number): Point2D {
-  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-}
-
-/**
- * Convert a straight segment to a zigzag SVG path.
- * amplitude: peak deviation perpendicular to segment direction.
- * frequency: number of zigzag teeth per unit length.
- */
-function segmentToZigzag(seg: Segment, amplitude: number, frequency: number): string {
-  const [p0, p1] = seg;
-  const segLen = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
-  if (segLen < 1e-9) return '';
-  const perp = perpDir(p0, p1);
-  const nTeeth = Math.max(2, Math.round(segLen * frequency));
-  const points: string[] = [`M ${p0[0]},${p0[1]}`];
-
-  for (let i = 1; i <= nTeeth; i++) {
-    const t = i / nTeeth;
-    const base = lerp(p0, p1, t);
-    const sign = i % 2 === 1 ? 1 : -1;
-    // Last point returns to the line
-    const amp = i === nTeeth ? 0 : amplitude * sign;
-    const x = base[0] + perp[0] * amp;
-    const y = base[1] + perp[1] * amp;
-    points.push(`L ${x},${y}`);
+  const nDots = Math.max(1, Math.floor(len / spacing));
+  const circles: string[] = [];
+  for (let i = 0; i <= nDots; i++) {
+    const t = nDots === 0 ? 0.5 : i / nDots;
+    const x = p0[0] + dx * t;
+    const y = p0[1] + dy * t;
+    circles.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="black"/>`);
   }
-
-  return points.join(' ');
+  return circles;
 }
 
-/**
- * Convert a straight segment to a wave (sinusoidal) SVG path using cubic Beziers.
- * amplitude: peak deviation perpendicular to segment direction.
- * frequency: number of half-waves per unit length.
- */
-function segmentToWave(seg: Segment, amplitude: number, frequency: number): string {
-  const [p0, p1] = seg;
-  const segLen = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
-  if (segLen < 1e-9) return '';
-  const perp = perpDir(p0, p1);
-  const nHalves = Math.max(2, Math.round(segLen * frequency));
-
-  let d = `M ${p0[0]},${p0[1]}`;
-  for (let i = 0; i < nHalves; i++) {
-    const t0 = i / nHalves;
-    const t1 = (i + 1) / nHalves;
-    const sign = i % 2 === 0 ? 1 : -1;
-
-    const start = lerp(p0, p1, t0);
-    const end = lerp(p0, p1, t1);
-    const mid = lerp(start, end, 0.5);
-
-    // Cubic Bezier control points: offset perpendicular at 1/3 and 2/3
-    const cp1: Point2D = [
-      lerp(start, end, 1 / 3)[0] + perp[0] * amplitude * sign,
-      lerp(start, end, 1 / 3)[1] + perp[1] * amplitude * sign,
-    ];
-    const cp2: Point2D = [
-      lerp(start, end, 2 / 3)[0] + perp[0] * amplitude * sign,
-      lerp(start, end, 2 / 3)[1] + perp[1] * amplitude * sign,
-    ];
-
-    d += ` C ${cp1[0]},${cp1[1]} ${cp2[0]},${cp2[1]} ${end[0]},${end[1]}`;
-  }
-
-  return d;
-}
-
-// --- Generate kakeami config ---
-
-const config = voronoiColoring(REGION, TILE_SIZE, K, PITCH, LINE_WEIGHT, SEED);
-
-// --- Build SVGs ---
-
-type PatternFn = (seg: Segment) => string;
-
-function buildSvg(patternFn: PatternFn, label: string): string {
+function buildStippleSvg(): string {
   const lines: string[] = [];
   lines.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${xmin} ${ymin} ${width} ${height}" width="400" height="400">`);
-
-  // Background
   lines.push(`  <rect x="${xmin}" y="${ymin}" width="${width}" height="${height}" fill="white"/>`);
 
-  // Background hatching
+  // Background stipple
   const regionPoly: Point2D[] = [[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]];
   const bgAngle = Math.PI / 4;
   const bgOffsets = kakeAngleOffsets(K);
-  lines.push('  <g class="bg-hatching" opacity="1">');
+  lines.push('  <g class="bg-hatching">');
   for (let j = 0; j < K; j++) {
     const angle = bgAngle + bgOffsets[j]!;
-    const bgLines = hatchPolygon(regionPoly, angle, PITCH);
-    for (const seg of bgLines) {
-      const d = patternFn(seg);
-      if (d) {
-        lines.push(`    <path d="${d}" fill="none" stroke="black" stroke-width="${sw}" stroke-linecap="round"/>`);
-      }
+    const bgSegs = hatchPolygon(regionPoly, angle, PITCH);
+    for (const seg of bgSegs) {
+      const dots = stippleSegment(seg, PITCH * 0.8, dotRadius);
+      lines.push(...dots.map(d => `    ${d}`));
     }
   }
   lines.push('  </g>');
 
-  // Tiles
+  // Tile stipple fills
   for (const tile of config.tiles) {
     const poly = tilePolygon(tile.cx, tile.cy, tile.phi, config.tileWidth, config.tileHeight);
     const polyPoints = poly.map(p => `${p[0]},${p[1]}`).join(' ');
 
-    lines.push(`  <g class="tile">`);
-    // White background polygon
+    lines.push('  <g class="tile">');
     lines.push(`    <polygon points="${polyPoints}" fill="white" stroke="none"/>`);
 
-    // Hatch lines as patterns
     for (const stroke of tile.block.strokes) {
       const segs = hatchPolygon(poly, stroke.theta, stroke.pitch);
       for (const seg of segs) {
-        const d = patternFn(seg);
-        if (d) {
-          lines.push(`    <path d="${d}" fill="none" stroke="black" stroke-width="${sw}" stroke-linecap="round"/>`);
-        }
+        const dots = stippleSegment(seg, PITCH * 0.8, dotRadius);
+        lines.push(...dots.map(d => `    ${d}`));
       }
     }
     lines.push('  </g>');
@@ -171,19 +115,82 @@ function buildSvg(patternFn: PatternFn, label: string): string {
   return lines.join('\n');
 }
 
-// Pattern functions
-const zigzagFn: PatternFn = (seg) => segmentToZigzag(seg, 0.015, 40);
-const waveFn: PatternFn = (seg) => segmentToWave(seg, 0.015, 30);
+// =====================================================================
+// Figure 2: Voronoi-cell tiles (non-rectangular), individually hatched
+// =====================================================================
 
-const zigzagSvg = buildSvg(zigzagFn, 'zigzag');
-const waveSvg = buildSvg(waveFn, 'wave');
+function buildVoronoiSvg(): string {
+  // Reconstruct Voronoi cells from the tile centers
+  const centers = config.tiles.map(t => [t.cx, t.cy] as [number, number]);
+  const delaunay = Delaunay.from(centers);
+  const voronoi = delaunay.voronoi([xmin, ymin, xmax, ymax]);
 
-// Write output
+  const lines: string[] = [];
+  lines.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${xmin} ${ymin} ${width} ${height}" width="400" height="400">`);
+  lines.push(`  <rect x="${xmin}" y="${ymin}" width="${width}" height="${height}" fill="white"/>`);
+
+  // Background hatching (standard lines, same as normal kakeami)
+  const regionPoly: Point2D[] = [[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]];
+  const bgAngle = Math.PI / 4;
+  const bgOffsets = kakeAngleOffsets(K);
+  lines.push('  <g class="bg-hatching">');
+  for (let j = 0; j < K; j++) {
+    const angle = bgAngle + bgOffsets[j]!;
+    const bgSegs = hatchPolygon(regionPoly, angle, PITCH);
+    for (const [p0, p1] of bgSegs) {
+      lines.push(`    <line x1="${p0[0]}" y1="${p0[1]}" x2="${p1[0]}" y2="${p1[1]}" stroke="black" stroke-width="${sw}" stroke-linecap="round"/>`);
+    }
+  }
+  lines.push('  </g>');
+
+  // Each Voronoi cell = one tile, hatched individually
+  for (let i = 0; i < config.tiles.length; i++) {
+    const cellPoly = voronoi.cellPolygon(i);
+    if (!cellPoly) continue;
+
+    // cellPolygon returns a closed polygon (first == last); remove last
+    const poly: Point2D[] = cellPoly.slice(0, -1).map(p => [p[0], p[1]] as Point2D);
+    const polyPoints = poly.map(p => `${p[0]},${p[1]}`).join(' ');
+
+    const tile = config.tiles[i]!;
+
+    lines.push('  <g class="tile">');
+    // White fill to occlude background
+    lines.push(`    <polygon points="${polyPoints}" fill="white" stroke="none"/>`);
+
+    // Hatch this Voronoi cell with the tile's assigned angles
+    for (const stroke of tile.block.strokes) {
+      const segs = hatchPolygon(poly, stroke.theta, stroke.pitch);
+      for (const [p0, p1] of segs) {
+        lines.push(`    <line x1="${p0[0]}" y1="${p0[1]}" x2="${p1[0]}" y2="${p1[1]}" stroke="black" stroke-width="${sw}" stroke-linecap="round"/>`);
+      }
+    }
+    lines.push('  </g>');
+  }
+
+  lines.push('</svg>');
+  return lines.join('\n');
+}
+
+// --- Generate and write ---
+
+const stippleSvg = buildStippleSvg();
+const voronoiSvg = buildVoronoiSvg();
+
 const outDir = path.resolve(import.meta.dirname, '../../public/experiments/assets');
 fs.mkdirSync(outDir, { recursive: true });
 
-fs.writeFileSync(path.join(outDir, 'pattern-zigzag.svg'), zigzagSvg, 'utf-8');
-fs.writeFileSync(path.join(outDir, 'pattern-wave.svg'), waveSvg, 'utf-8');
+fs.writeFileSync(path.join(outDir, 'pattern-stipple.svg'), stippleSvg, 'utf-8');
+fs.writeFileSync(path.join(outDir, 'pattern-voronoi.svg'), voronoiSvg, 'utf-8');
 
-console.log(`Generated: ${path.join(outDir, 'pattern-zigzag.svg')}`);
-console.log(`Generated: ${path.join(outDir, 'pattern-wave.svg')}`);
+// Clean up old files
+for (const old of ['pattern-zigzag.svg', 'pattern-wave.svg']) {
+  const p = path.join(outDir, old);
+  if (fs.existsSync(p)) {
+    fs.unlinkSync(p);
+    console.log(`Removed: ${p}`);
+  }
+}
+
+console.log(`Generated: ${path.join(outDir, 'pattern-stipple.svg')}`);
+console.log(`Generated: ${path.join(outDir, 'pattern-voronoi.svg')}`);
