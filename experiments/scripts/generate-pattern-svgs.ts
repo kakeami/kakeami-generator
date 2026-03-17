@@ -31,7 +31,8 @@ import type { Segment, Point2D } from '../../src/core/index';
 // Fixed parameters matching the experiment setup
 const REGION: [number, number, number, number] = [0, 0, 6, 6];
 const TILE_SIZE = 0.6;
-const K = 2;
+const K_STIPPLE = 2;
+const K_VORONOI = 1;
 const PITCH = 0.08;
 const LINE_WEIGHT = 0.4;
 const SEED = 42;
@@ -43,8 +44,9 @@ const strokeScale = Math.min(width, height) / 450;
 const sw = LINE_WEIGHT * strokeScale;
 const dotRadius = PITCH * 0.35;
 
-// --- Generate standard kakeami config (used for both figures) ---
-const config = voronoiColoring(REGION, TILE_SIZE, K, PITCH, LINE_WEIGHT, SEED);
+// --- Generate kakeami configs ---
+const configStipple = voronoiColoring(REGION, TILE_SIZE, K_STIPPLE, PITCH, LINE_WEIGHT, SEED);
+const configVoronoi = voronoiColoring(REGION, TILE_SIZE, K_VORONOI, PITCH, LINE_WEIGHT, SEED);
 
 // =====================================================================
 // Figure 1: Rectangular tiles + stipple (dot) fill
@@ -81,9 +83,9 @@ function buildStippleSvg(): string {
   // Background stipple
   const regionPoly: Point2D[] = [[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]];
   const bgAngle = Math.PI / 4;
-  const bgOffsets = kakeAngleOffsets(K);
+  const bgOffsets = kakeAngleOffsets(K_STIPPLE);
   lines.push('  <g class="bg-hatching">');
-  for (let j = 0; j < K; j++) {
+  for (let j = 0; j < K_STIPPLE; j++) {
     const angle = bgAngle + bgOffsets[j]!;
     const bgSegs = hatchPolygon(regionPoly, angle, PITCH);
     for (const seg of bgSegs) {
@@ -94,8 +96,8 @@ function buildStippleSvg(): string {
   lines.push('  </g>');
 
   // Tile stipple fills
-  for (const tile of config.tiles) {
-    const poly = tilePolygon(tile.cx, tile.cy, tile.phi, config.tileWidth, config.tileHeight);
+  for (const tile of configStipple.tiles) {
+    const poly = tilePolygon(tile.cx, tile.cy, tile.phi, configStipple.tileWidth, configStipple.tileHeight);
     const polyPoints = poly.map(p => `${p[0]},${p[1]}`).join(' ');
 
     lines.push('  <g class="tile">');
@@ -121,7 +123,7 @@ function buildStippleSvg(): string {
 
 function buildVoronoiSvg(): string {
   // Reconstruct Voronoi cells from the tile centers
-  const centers = config.tiles.map(t => [t.cx, t.cy] as [number, number]);
+  const centers = configVoronoi.tiles.map(t => [t.cx, t.cy] as [number, number]);
   const delaunay = Delaunay.from(centers);
   const voronoi = delaunay.voronoi([xmin, ymin, xmax, ymax]);
 
@@ -129,12 +131,12 @@ function buildVoronoiSvg(): string {
   lines.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${xmin} ${ymin} ${width} ${height}" width="400" height="400">`);
   lines.push(`  <rect x="${xmin}" y="${ymin}" width="${width}" height="${height}" fill="white"/>`);
 
-  // Background hatching (standard lines, same as normal kakeami)
+  // Background hatching (standard lines)
   const regionPoly: Point2D[] = [[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]];
   const bgAngle = Math.PI / 4;
-  const bgOffsets = kakeAngleOffsets(K);
+  const bgOffsets = kakeAngleOffsets(K_VORONOI);
   lines.push('  <g class="bg-hatching">');
-  for (let j = 0; j < K; j++) {
+  for (let j = 0; j < K_VORONOI; j++) {
     const angle = bgAngle + bgOffsets[j]!;
     const bgSegs = hatchPolygon(regionPoly, angle, PITCH);
     for (const [p0, p1] of bgSegs) {
@@ -144,7 +146,7 @@ function buildVoronoiSvg(): string {
   lines.push('  </g>');
 
   // Each Voronoi cell = one tile, hatched individually
-  for (let i = 0; i < config.tiles.length; i++) {
+  for (let i = 0; i < configVoronoi.tiles.length; i++) {
     const cellPoly = voronoi.cellPolygon(i);
     if (!cellPoly) continue;
 
@@ -152,7 +154,7 @@ function buildVoronoiSvg(): string {
     const poly: Point2D[] = cellPoly.slice(0, -1).map(p => [p[0], p[1]] as Point2D);
     const polyPoints = poly.map(p => `${p[0]},${p[1]}`).join(' ');
 
-    const tile = config.tiles[i]!;
+    const tile = configVoronoi.tiles[i]!;
 
     lines.push('  <g class="tile">');
     // White fill to occlude background
