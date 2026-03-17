@@ -192,6 +192,9 @@ function render() {
       `E_contrast: ${config.eContrast().toFixed(3)} | ` +
       `E_LdG: ${config.eLdG().toFixed(3)} | ` +
       `S_order: ${config.sOrder().toFixed(3)} | ` +
+      `H_angle: ${config.hAngle().toFixed(3)}\n` +
+      `C_cov: ${config.cCov().toFixed(3)} | ` +
+      `U_vor: ${config.uVor().toFixed(3)} | ` +
       `Tiles: ${config.tiles.length}`;
   }
 }
