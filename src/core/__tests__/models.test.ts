@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Stroke, Block, Tile, kakeAngleOffsets } from '../models';
+import { Stroke, Block, Tile, KakeamiConfig, kakeAngleOffsets } from '../models';
 
 const PI = Math.PI;
 
@@ -101,5 +101,42 @@ describe('Tile', () => {
   it('phi returns primary theta', () => {
     const t = new Tile(0, 0, Block.standard(PI / 4, 1, 0.05));
     expect(t.phi).toBeCloseTo(PI / 4);
+  });
+});
+
+describe('KakeamiConfig stored edges', () => {
+  const tiles = [
+    new Tile(0, 0, Block.standard(0, 1, 0.05)),
+    new Tile(1, 0, Block.standard(PI / 4, 1, 0.05)),
+    new Tile(0, 1, Block.standard(PI / 2, 1, 0.05)),
+  ];
+  const region: [number, number, number, number] = [0, 0, 2, 2];
+  const storedEdges: [number, number][] = [[0, 1], [0, 2], [1, 2]];
+
+  it('adjacency() returns stored edges when provided', () => {
+    const config = new KakeamiConfig(tiles, region, 1, 1, 0.5, storedEdges);
+    expect(config.adjacency()).toEqual(storedEdges);
+  });
+
+  it('adjacency() falls back to rect-overlap when no edges stored', () => {
+    const config = new KakeamiConfig(tiles, region, 1, 1, 0.5);
+    // Without stored edges, falls back to rect-overlap
+    const edges = config.adjacency();
+    expect(Array.isArray(edges)).toBe(true);
+  });
+
+  it('returned edges are a copy (mutation-safe)', () => {
+    const config = new KakeamiConfig(tiles, region, 1, 1, 0.5, storedEdges);
+    const edges1 = config.adjacency();
+    edges1.push([2, 3]);
+    const edges2 = config.adjacency();
+    expect(edges2).toEqual(storedEdges);
+  });
+
+  it('eContrast and eLdG use stored edges', () => {
+    const config = new KakeamiConfig(tiles, region, 1, 1, 0.5, storedEdges);
+    // With 3 tiles at 0, PI/4, PI/2 and all pairs adjacent, metrics should be > 0
+    expect(config.eContrast()).toBeGreaterThan(0);
+    expect(config.eLdG()).toBeGreaterThan(0);
   });
 });

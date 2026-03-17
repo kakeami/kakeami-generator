@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bfsGreedyAngles, voronoiColoring } from '../voronoi-coloring';
+import { adjListToEdges, bfsGreedyAngles, voronoiColoring } from '../voronoi-coloring';
 import { createRng } from '../math-utils';
 import { dRp1 } from '../math-utils';
 
@@ -56,6 +56,31 @@ describe('bfsGreedyAngles', () => {
   });
 });
 
+describe('adjListToEdges', () => {
+  it('converts adjacency list to canonical edge list', () => {
+    // Triangle: 0-1, 0-2, 1-2
+    const adj = [[1, 2], [0, 2], [0, 1]];
+    const edges = adjListToEdges(adj);
+    expect(edges).toEqual([[0, 1], [0, 2], [1, 2]]);
+  });
+
+  it('handles empty adjacency', () => {
+    const adj = [[], [], []];
+    expect(adjListToEdges(adj)).toEqual([]);
+  });
+
+  it('handles single edge', () => {
+    const adj = [[1], [0]];
+    expect(adjListToEdges(adj)).toEqual([[0, 1]]);
+  });
+
+  it('produces no duplicates', () => {
+    const adj = [[1, 2, 3], [0], [0], [0]];
+    const edges = adjListToEdges(adj);
+    expect(edges).toEqual([[0, 1], [0, 2], [0, 3]]);
+  });
+});
+
 describe('voronoiColoring', () => {
   const region: [number, number, number, number] = [0, 0, 3, 3];
 
@@ -108,5 +133,17 @@ describe('voronoiColoring', () => {
     const config = voronoiColoring([0, 0, 0.01, 0.01], 0.6, 1, 0.05, 0.5, 42);
     // Poisson-disk may produce 0 or 1 point in a tiny region
     expect(config.tiles.length).toBeLessThanOrEqual(1);
+  });
+
+  it('stores Voronoi edges (adjacency returns them)', () => {
+    const config = voronoiColoring(region, 0.6, 1, 0.05, 0.5, 42);
+    const edges = config.adjacency();
+    expect(edges.length).toBeGreaterThan(0);
+    // All indices must be in bounds
+    for (const [i, j] of edges) {
+      expect(i).toBeGreaterThanOrEqual(0);
+      expect(j).toBeLessThan(config.tiles.length);
+      expect(j).toBeGreaterThan(i);
+    }
   });
 });

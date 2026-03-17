@@ -101,6 +101,7 @@ export class KakeamiConfig {
   readonly tileWidth: number;
   readonly tileHeight: number;
   readonly lineWeight: number;
+  private readonly _edges: readonly [number, number][] | null;
 
   constructor(
     tiles: readonly Tile[],
@@ -108,6 +109,7 @@ export class KakeamiConfig {
     tileWidth: number,
     tileHeight: number,
     lineWeight: number = 0.5,
+    edges?: readonly [number, number][],
   ) {
     if (tileHeight < tileWidth) {
       throw new Error(
@@ -119,10 +121,14 @@ export class KakeamiConfig {
     this.tileWidth = tileWidth;
     this.tileHeight = tileHeight;
     this.lineWeight = lineWeight;
+    this._edges = edges ?? null;
   }
 
-  /** Adjacency graph edges. Pairs where rect distance < eps. */
+  /** Adjacency graph edges. Uses stored Voronoi edges if available, else rect-overlap fallback. */
   adjacency(eps: number = 1e-6): [number, number][] {
+    if (this._edges !== null) {
+      return this._edges.slice() as [number, number][];
+    }
     const edges: [number, number][] = [];
     const n = this.tiles.length;
     for (let i = 0; i < n; i++) {

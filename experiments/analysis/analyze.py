@@ -1,5 +1,5 @@
 """
-Experiment analysis: metrics.json → box plots, summary table, representative images, HTML report.
+Experiment analysis: metrics.json → box plots, summary table, statistical tests, HTML report.
 
 Output goes to public/experiments/ for deployment.
 """
@@ -16,6 +16,11 @@ import matplotlib.patches as mpatches
 from matplotlib.collections import LineCollection
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
+from scipy import stats
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+from statsmodels.stats.anova import anova_lm
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = ROOT / "experiments" / "results"
@@ -57,29 +62,25 @@ def load_data() -> pd.DataFrame:
 
 
 def plot_boxplots(df: pd.DataFrame) -> None:
-    """One figure per metric: 4 subplots (k=1..4), each with 4 box plots."""
+    """One single-panel figure per metric with 4 box plots (conditions)."""
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 
     for metric in METRICS:
-        fig, axes = plt.subplots(1, 4, figsize=(14, 3.5), sharey=True)
+        fig, ax = plt.subplots(figsize=(6, 4))
         fig.suptitle(METRIC_LABELS.get(metric, metric), fontsize=14, y=1.02)
 
-        for idx, k in enumerate([1, 2, 3, 4]):
-            ax = axes[idx]
-            subset = df[df["k"] == k]
-            data = [subset[subset["condition"] == c][metric].values for c in CONDITIONS]
-            labels = [CONDITION_LABELS[c] for c in CONDITIONS]
+        data = [df[df["condition"] == c][metric].values for c in CONDITIONS]
+        labels = [CONDITION_LABELS[c] for c in CONDITIONS]
 
-            bp = ax.boxplot(data, tick_labels=labels, patch_artist=True, widths=0.6)
-            colors = ["#4C72B0", "#55A868", "#C44E52", "#8172B2"]
-            for patch, color in zip(bp["boxes"], colors):
-                patch.set_facecolor(color)
-                patch.set_alpha(0.7)
+        bp = ax.boxplot(data, tick_labels=labels, patch_artist=True, widths=0.6)
+        colors = ["#4C72B0", "#55A868", "#C44E52", "#8172B2"]
+        for patch, color in zip(bp["boxes"], colors):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.7)
 
-            ax.set_title(f"k = {k}")
-            ax.tick_params(axis="x", rotation=45)
-            ax.set_ylim(0, 1)
-            ax.grid(axis="y", alpha=0.3)
+        ax.tick_params(axis="x", rotation=45)
+        ax.set_ylim(0, 1)
+        ax.grid(axis="y", alpha=0.3)
 
         plt.tight_layout()
         fig.savefig(ASSETS_DIR / f"boxplot_{metric}.png", dpi=150, bbox_inches="tight")
@@ -88,49 +89,117 @@ def plot_boxplots(df: pd.DataFrame) -> None:
 
 
 def compute_best_cells(df: pd.DataFrame) -> dict:
-    """For each k × metric, find the best condition. Returns {(k, metric_plain): condition_label}."""
+    """For each metric, find the best condition. Returns {metric_plain: condition_label}."""
     best = {}
-    for k in [1, 2, 3, 4]:
-        for m in METRICS:
-            means = {}
-            for cond in CONDITIONS:
-                sub = df[(df["k"] == k) & (df["condition"] == cond)]
-                means[CONDITION_LABELS[cond]] = sub[m].mean()
-            if METRIC_HIGHER_IS_BETTER[m]:
-                best_cond = max(means, key=means.get)
-            else:
-                best_cond = min(means, key=means.get)
-            best[(k, METRIC_LABELS_PLAIN[m])] = best_cond
+    for m in METRICS:
+        means = {}
+        for cond in CONDITIONS:
+            sub = df[df["condition"] == cond]
+            means[CONDITION_LABELS[cond]] = sub[m].mean()
+        if METRIC_HIGHER_IS_BETTER[m]:
+            best_cond = max(means, key=means.get)
+        else:
+            best_cond = min(means, key=means.get)
+        best[METRIC_LABELS_PLAIN[m]] = best_cond
     return best
 
 
 def summary_table(df: pd.DataFrame) -> pd.DataFrame:
-    """Mean +/- SD for each condition x k x metric."""
+    """Mean +/- SD for each condition x metric (single table, k=1 only)."""
     rows = []
-    for k in [1, 2, 3, 4]:
-        for cond in CONDITIONS:
-            sub = df[(df["k"] == k) & (df["condition"] == cond)]
-            row = {"k": k, "condition": CONDITION_LABELS[cond]}
-            for m in METRICS:
-                mean = sub[m].mean()
-                std = sub[m].std()
-                row[METRIC_LABELS_PLAIN[m]] = f"{mean:.3f} \u00b1 {std:.3f}"
-            row["nTiles (mean)"] = f"{sub['nTiles'].mean():.1f}"
-            row["wallTimeMs (mean)"] = f"{sub['wallTimeMs'].mean():.1f}"
-            rows.append(row)
+    for cond in CONDITIONS:
+        sub = df[df["condition"] == cond]
+        row = {"condition": CONDITION_LABELS[cond]}
+        for m in METRICS:
+            mean = sub[m].mean()
+            std = sub[m].std()
+            row[METRIC_LABELS_PLAIN[m]] = f"{mean:.3f} \u00b1 {std:.3f}"
+        row["nTiles (mean)"] = f"{sub['nTiles'].mean():.1f}"
+        row["nEdges (mean)"] = f"{sub['nEdges'].mean():.1f}"
+        row["wallTimeMs (mean)"] = f"{sub['wallTimeMs'].mean():.1f}"
+        rows.append(row)
     return pd.DataFrame(rows)
 
 
+def two_way_anova(df: pd.DataFrame) -> dict:
+    """Two-way ANOVA: placement × angle for each metric. Returns dict of DataFrames."""
+    # Decode conditions into factors
+    df = df.copy()
+    df["placement"] = df["condition"].map(
+        lambda c: "Poisson" if c.startswith("poisson") else "Random"
+    )
+    df["angle"] = df["condition"].map(
+        lambda c: "BFS" if c.endswith("Bfs") else "Random"
+    )
+
+    results = {}
+    for metric in METRICS:
+        model = ols(f"{metric} ~ C(placement) * C(angle)", data=df).fit()
+        table = anova_lm(model, typ=2)
+        # Compute η² = SS_effect / SS_total
+        ss_total = table["sum_sq"].sum()
+        table["eta_sq"] = table["sum_sq"] / ss_total
+        results[metric] = table
+    return results
+
+
+def compute_effect_sizes(df: pd.DataFrame) -> dict:
+    """Pairwise Cohen's d (pooled SD) for all 6 condition pairs per metric."""
+    results = {}
+    for metric in METRICS:
+        pairs = []
+        for i in range(len(CONDITIONS)):
+            for j in range(i + 1, len(CONDITIONS)):
+                c1, c2 = CONDITIONS[i], CONDITIONS[j]
+                x1 = df[df["condition"] == c1][metric].values
+                x2 = df[df["condition"] == c2][metric].values
+                n1, n2 = len(x1), len(x2)
+                pooled_sd = np.sqrt(
+                    ((n1 - 1) * x1.std(ddof=1) ** 2 + (n2 - 1) * x2.std(ddof=1) ** 2)
+                    / (n1 + n2 - 2)
+                )
+                d = (x1.mean() - x2.mean()) / pooled_sd if pooled_sd > 0 else 0.0
+                pairs.append({
+                    "pair": f"{CONDITION_LABELS[c1]} vs {CONDITION_LABELS[c2]}",
+                    "cohen_d": d,
+                })
+        results[metric] = pairs
+    return results
+
+
+def pairwise_tests(df: pd.DataFrame) -> dict:
+    """Tukey HSD post-hoc for each metric."""
+    results = {}
+    for metric in METRICS:
+        tukey = pairwise_tukeyhsd(
+            df[metric],
+            df["condition"].map(CONDITION_LABELS),
+            alpha=0.05,
+        )
+        results[metric] = str(tukey)
+    return results
+
+
 def select_representative_images(df: pd.DataFrame) -> None:
-    """For each condition x k, pick the seed closest to median eContrast."""
+    """Copy k=1..4 images for median-eContrast seeds (from representative_seeds.json)."""
     OUTPUT_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
-    for k in [1, 2, 3, 4]:
+    rep_seeds_path = RESULTS_DIR / "representative_seeds.json"
+    if rep_seeds_path.exists():
+        with open(rep_seeds_path) as f:
+            rep_seeds = json.load(f)
+    else:
+        # Fallback: compute from metrics data (k=1 only)
+        rep_seeds = {}
         for cond in CONDITIONS:
-            sub = df[(df["k"] == k) & (df["condition"] == cond)]
+            sub = df[df["condition"] == cond]
             median_val = sub["eContrast"].median()
             closest_idx = (sub["eContrast"] - median_val).abs().idxmin()
-            seed = int(sub.loc[closest_idx, "seed"])
+            rep_seeds[cond] = int(sub.loc[closest_idx, "seed"])
+
+    for cond in CONDITIONS:
+        seed = rep_seeds[cond]
+        for k in [1, 2, 3, 4]:
             src = IMAGES_DIR / f"{cond}_k{k}_s{seed}.png"
             dst = OUTPUT_IMAGES_DIR / f"{cond}_k{k}.png"
             if src.exists():
@@ -313,7 +382,14 @@ def generate_algorithm_illustration() -> None:
     print("  Saved algorithm_pipeline.png")
 
 
-def render_report(df: pd.DataFrame, summary: pd.DataFrame, best_cells: dict) -> None:
+def render_report(
+    df: pd.DataFrame,
+    summary: pd.DataFrame,
+    best_cells: dict,
+    anova_results: dict,
+    effect_sizes: dict,
+    tukey_results: dict,
+) -> None:
     """Render Jinja2 template to HTML."""
     env = Environment(
         loader=FileSystemLoader(str(Path(__file__).parent)),
@@ -321,19 +397,41 @@ def render_report(df: pd.DataFrame, summary: pd.DataFrame, best_cells: dict) -> 
     )
     template = env.get_template("template.html")
 
-    # Prepare summary data for template
-    summary_data = []
-    for k in [1, 2, 3, 4]:
-        k_rows = summary[summary["k"] == k].to_dict("records")
-        summary_data.append({"k": k, "rows": k_rows})
+    # Format ANOVA tables for template
+    anova_data = {}
+    for metric, table in anova_results.items():
+        rows = []
+        for source in table.index:
+            row = table.loc[source]
+            rows.append({
+                "source": source.replace("C(placement)", "Placement")
+                               .replace("C(angle)", "Angle")
+                               .replace(":", " × "),
+                "ss": f"{row['sum_sq']:.6f}",
+                "df": f"{row['df']:.0f}",
+                "f": f"{row['F']:.2f}" if not np.isnan(row['F']) else "—",
+                "p": f"{row['PR(>F)']:.4f}" if not np.isnan(row['PR(>F)']) else "—",
+                "eta_sq": f"{row['eta_sq']:.4f}",
+            })
+        anova_data[METRIC_LABELS_PLAIN[metric]] = rows
+
+    # Format effect size tables for template
+    effect_data = {}
+    for metric, pairs in effect_sizes.items():
+        effect_data[METRIC_LABELS_PLAIN[metric]] = [
+            {"pair": p["pair"], "d": f"{p['cohen_d']:.3f}"} for p in pairs
+        ]
 
     html = template.render(
-        summary_data=summary_data,
+        summary_rows=summary.to_dict("records"),
         conditions=CONDITIONS,
         condition_labels=CONDITION_LABELS,
         k_values=[1, 2, 3, 4],
         best_cells=best_cells,
         metric_labels_plain=METRIC_LABELS_PLAIN,
+        anova_data=anova_data,
+        effect_data=effect_data,
+        n_seeds=len(df["seed"].unique()),
     )
 
     output_path = OUTPUT_DIR / "index.html"
@@ -355,6 +453,18 @@ def main() -> None:
     print("Computing best cells...")
     best_cells = compute_best_cells(df)
 
+    print("Running two-way ANOVA...")
+    anova_results = two_way_anova(df)
+    for metric, table in anova_results.items():
+        print(f"  {metric}:")
+        print(table.to_string())
+
+    print("Computing effect sizes...")
+    effect_sizes = compute_effect_sizes(df)
+
+    print("Running Tukey HSD post-hoc tests...")
+    tukey_results = pairwise_tests(df)
+
     print("Selecting representative images...")
     select_representative_images(df)
 
@@ -362,7 +472,7 @@ def main() -> None:
     generate_algorithm_illustration()
 
     print("Rendering report...")
-    render_report(df, summary, best_cells)
+    render_report(df, summary, best_cells, anova_results, effect_sizes, tukey_results)
 
     print("Analysis complete!")
 

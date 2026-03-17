@@ -136,7 +136,8 @@
     Section 3 introduces a novel mathematical formulation for kakeami quality,
     drawing on concepts from nematic liquid crystal physics and direction field theory.
     Section 4 describes the proposed algorithm and the baseline conditions.
-    Section 5 details the experimental setup, Section 6 presents the quantitative results,
+    Section 5 details the experimental setup, Section 6 presents the quantitative results
+    including two-way ANOVA and effect size analysis,
     Section 7 discusses their implications, and Section 8 outlines directions for future work.
   </p>
 
@@ -228,7 +229,7 @@
   <h3>3.3 Quality Metrics</h3>
   <p>
     Given a configuration $K$ and its adjacency edge set $E$
-    (pairs of tiles whose bounding rectangles touch),
+    (Voronoi adjacency edges derived from Delaunay triangulation of tile centres),
     we propose three complementary metrics.
     Each captures a different aspect of kakeami quality,
     and together they provide a comprehensive quantitative evaluation framework.
@@ -324,22 +325,29 @@
   <h2>5. Experimental Setup</h2>
   <p>
     To evaluate the four conditions defined in Section 4,
-    we run a controlled experiment that varies the kake count $k$ (the number of hatch layers per tile)
-    across 10 random seeds.
-    All other parameters are fixed to isolate the effect of placement and angle assignment strategies.
+    we run a controlled experiment with {{ n_seeds }} random seeds.
+    All quality metrics are computed at $k = 1$ only, because the three metrics
+    ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$)
+    depend solely on the primary angle $\phi_i$ of each tile
+    and are therefore invariant to the kake count $k$.
+    Representative images are rendered at $k = 1, 2, 3, 4$
+    for the median-$E_{\mathrm{contrast}}$ seed of each condition
+    to illustrate the visual effect of layering.
   </p>
 
   <table>
     <tr><th>Parameter</th><th>Value</th></tr>
     <tr><td>Conditions</td><td>4 (poissonBfs, poissonRandom, randomBfs, randomRandom)</td></tr>
-    <tr><td>$k$ (kake count)</td><td>1, 2, 3, 4</td></tr>
-    <tr><td>Seeds</td><td>42, 123, 256, 789, 1024, 2048, 3141, 4096, 5555, 9999</td></tr>
-    <tr><td>Total runs</td><td>$4 \times 4 \times 10 = 160$</td></tr>
+    <tr><td>$k$ (for metrics)</td><td>1</td></tr>
+    <tr><td>$k$ (for images)</td><td>1, 2, 3, 4</td></tr>
+    <tr><td>Seeds</td><td>0&ndash;{{ n_seeds - 1 }} ({{ n_seeds }} seeds)</td></tr>
+    <tr><td>Total runs</td><td>$4 \times {{ n_seeds }} + 4 \times 3 = {{ 4 * n_seeds + 12 }}$ (metrics + extra images)</td></tr>
     <tr><td>Region</td><td>$[0, 0, 6, 6]$</td></tr>
     <tr><td>Tile size</td><td>0.6</td></tr>
     <tr><td>Pitch</td><td>0.08</td></tr>
     <tr><td>Line weight</td><td>0.4</td></tr>
     <tr><td>PNG resolution</td><td>512 &times; 512</td></tr>
+    <tr><td>Adjacency</td><td>Voronoi (Delaunay triangulation of tile centres)</td></tr>
   </table>
   <p>
     Rendering uses the same SVG pipeline as the
@@ -349,14 +357,22 @@
     All render noise parameters (angle, spacing, weight) are set to 0 and background hatching is disabled
     to isolate the effect of placement and angle assignment strategies.
   </p>
+  <p>
+    <strong>Adjacency consistency.</strong>
+    All four conditions use Voronoi adjacency (derived from Delaunay triangulation of tile centres)
+    for both BFS optimisation and metric evaluation.
+    This ensures that the adjacency graph over which the BFS greedy algorithm maximises contrast
+    is identical to the graph used to compute $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$.
+  </p>
 
   <!-- 6. Results -->
   <h2>6. Results</h2>
   <p>
-    We now present the experimental results using the three quality metrics defined in Section 3.
-    For each metric, we show box plots across the 10 seeds (Section 6.1),
-    summary statistics with the best condition highlighted (Section 6.2),
-    and representative images selected at the median $E_{\mathrm{contrast}}$ (Section 6.3).
+    We present the experimental results using the three quality metrics defined in Section 3.
+    All metrics are computed at $k = 1$.
+    Section 6.1 shows box plots, Section 6.2 provides summary statistics,
+    Section 6.3 presents the statistical analysis (two-way ANOVA and effect sizes),
+    and Section 6.4 shows representative images across $k$ values.
   </p>
 
   <h3>6.1 Quality Metrics</h3>
@@ -365,7 +381,7 @@
   <figure>
     <img src="assets/boxplot_{{ metric }}.png" alt="Box plot of {{ metric }}" />
     <figcaption>
-      {% if metric == 'eContrast' %}Figure 2: $E_{\mathrm{contrast}}$ distribution across conditions and $k$ values.
+      {% if metric == 'eContrast' %}Figure 2: $E_{\mathrm{contrast}}$ distribution across conditions ($k = 1$, {{ n_seeds }} seeds).
       {% elif metric == 'eLdG' %}Figure 3: $E_{\mathrm{LdG}}$ distribution. Values above 0.5 indicate anti-ferromagnetic ordering beyond random.
       {% else %}Figure 4: Scalar order parameter $S$. Lower values indicate better angular isotropy.{% endif %}
     </figcaption>
@@ -375,12 +391,11 @@
   <h3>6.2 Summary Table</h3>
   <p>
     Cells with a <span style="background: var(--color-best); padding: 0.1em 0.3em;">green background</span>
-    indicate the best-performing condition for that metric and $k$ value
+    indicate the best-performing condition for that metric
     (highest for $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$; lowest for $S$).
+    All metrics computed at $k = 1$.
   </p>
 
-  {% for group in summary_data %}
-  <h4>$k = {{ group.k }}$</h4>
   <table>
     <tr>
       <th>Condition</th>
@@ -388,23 +403,69 @@
       <th>$E_{\mathrm{LdG}}$</th>
       <th>$S$</th>
       <th>Tiles</th>
+      <th>Edges</th>
       <th>Time (ms)</th>
     </tr>
-    {% for row in group.rows %}
+    {% for row in summary_rows %}
     <tr>
       <td>{{ row.condition }}</td>
-      <td{% if best_cells.get((group.k, 'E_contrast')) == row.condition %} class="best"{% endif %}>{{ row.E_contrast }}</td>
-      <td{% if best_cells.get((group.k, 'E_LdG')) == row.condition %} class="best"{% endif %}>{{ row.E_LdG }}</td>
-      <td{% if best_cells.get((group.k, 'S')) == row.condition %} class="best"{% endif %}>{{ row.S }}</td>
+      <td{% if best_cells.get('E_contrast') == row.condition %} class="best"{% endif %}>{{ row.E_contrast }}</td>
+      <td{% if best_cells.get('E_LdG') == row.condition %} class="best"{% endif %}>{{ row.E_LdG }}</td>
+      <td{% if best_cells.get('S') == row.condition %} class="best"{% endif %}>{{ row.S }}</td>
       <td>{{ row["nTiles (mean)"] }}</td>
+      <td>{{ row["nEdges (mean)"] }}</td>
       <td>{{ row["wallTimeMs (mean)"] }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h3>6.3 Statistical Analysis</h3>
+  <p>
+    To rigorously assess the effects of tile placement and angle assignment,
+    we perform a two-way ANOVA (Type II) with placement and angle as fixed factors.
+    We report $F$-statistics, $p$-values, and effect sizes ($\eta^2 = SS_{\mathrm{effect}} / SS_{\mathrm{total}}$).
+    Post-hoc pairwise comparisons use Tukey HSD at $\alpha = 0.05$.
+  </p>
+
+  {% for metric_plain, rows in anova_data.items() %}
+  <h4>ANOVA: ${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('E_LdG', 'E_{\\mathrm{LdG}}') }}$</h4>
+  <table>
+    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.source }}</td>
+      <td>{{ row.ss }}</td>
+      <td>{{ row.df }}</td>
+      <td>{{ row.f }}</td>
+      <td>{{ row.p }}</td>
+      <td>{{ row.eta_sq }}</td>
     </tr>
     {% endfor %}
   </table>
   {% endfor %}
 
-  <h3>6.3 Representative Images</h3>
-  <p>For each condition and $k$ value, the image whose $E_{\mathrm{contrast}}$ is closest to the median is shown.</p>
+  <h4>Pairwise Effect Sizes (Cohen's $d$)</h4>
+  <p>
+    Positive $d$ indicates the first condition scores higher than the second.
+    By convention: $|d| < 0.2$ negligible, $0.2$&ndash;$0.5$ small, $0.5$&ndash;$0.8$ medium, $> 0.8$ large.
+  </p>
+
+  {% for metric_plain, pairs in effect_data.items() %}
+  <h4>${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('E_LdG', 'E_{\\mathrm{LdG}}') }}$</h4>
+  <table>
+    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
+    {% for pair in pairs %}
+    <tr><td>{{ pair.pair }}</td><td>{{ pair.d }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endfor %}
+
+  <h3>6.4 Representative Images</h3>
+  <p>
+    For each condition, the seed whose $E_{\mathrm{contrast}}$ ($k = 1$) is closest to the median is shown.
+    Images are rendered at $k = 1, 2, 3, 4$ to illustrate the visual effect of layering.
+    Note that $k$ does not affect the quality metrics, which depend only on the primary angle $\phi_i$.
+  </p>
 
   {% for k in k_values %}
   <h4>$k = {{ k }}$</h4>
@@ -422,32 +483,47 @@
   <h2>7. Discussion</h2>
   <p>
     The results in Section 6 reveal clear performance differences among the four conditions.
-    We now analyse the individual and combined effects of the two algorithmic components,
-    interpret the metrics in the context of the nematic analogy introduced in Section 3,
-    and identify limitations.
+    We now analyse the individual and combined effects of the two algorithmic components
+    using the ANOVA results, interpret the metrics in the context of the nematic analogy
+    introduced in Section 3, and identify limitations.
   </p>
 
   <h3>7.1 Effect of Angle Assignment</h3>
   <p>
-    The BFS greedy strategy consistently outperforms random angle assignment on $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$
-    across all $k$ values. This confirms that local contrast maximisation via the adjacency graph is the primary driver
-    of visual quality. The effect is most pronounced at $k = 1$, where each tile has only a single hatch direction,
-    making angle contrast the dominant perceptual cue.
+    The two-way ANOVA confirms that the angle assignment strategy is the dominant factor.
+    For $E_{\mathrm{contrast}}$, the angle factor shows a large effect size ($\eta^2$),
+    indicating that BFS greedy assignment accounts for the majority of variance in angle contrast.
+    The BFS greedy strategy consistently outperforms random angle assignment on both
+    $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$,
+    confirming that local contrast maximisation via the adjacency graph
+    is the primary driver of visual quality.
   </p>
 
   <h3>7.2 Effect of Tile Placement</h3>
   <p>
-    Poisson-disk placement provides a modest but consistent improvement over uniform random placement.
+    The ANOVA results show that the placement factor (Poisson-disk vs. uniform random)
+    has a statistically significant but smaller effect than angle assignment.
+    Poisson-disk placement provides a modest improvement over uniform random placement.
     The minimum distance guarantee prevents tile clustering, which leads to more regular adjacency graphs
-    and, consequently, more effective angle assignment. The effect is smaller than that of the angle strategy,
-    suggesting that angle assignment is the more important of the two factors.
+    and, consequently, more effective angle assignment.
+    The smaller $\eta^2$ for placement relative to angle assignment
+    suggests that angle optimisation is the more important of the two factors.
   </p>
 
-  <h3>7.3 Interaction Effects</h3>
+  <h3>7.3 k-Invariance of Quality Metrics</h3>
   <p>
-    The proposed method (poissonBfs) achieves the best results overall, confirming that both components contribute positively.
-    The improvement is approximately additive: the combined effect is close to the sum of individual contributions,
-    with no strong interaction.
+    An important property of our three quality metrics is their invariance to the kake count $k$.
+    All three metrics &mdash; $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, and $S$ &mdash;
+    depend only on the primary angle $\phi_i$ of each tile,
+    which is determined entirely by the tile placement and angle assignment strategies.
+    The secondary strokes added for $k \geq 2$ (at fixed angular offsets of 45&deg;, 90&deg;, etc.)
+    do not influence any of the metrics.
+  </p>
+  <p>
+    This $k$-invariance is a limitation of the current metric framework:
+    the metrics cannot distinguish between a $k = 1$ and $k = 4$ configuration
+    that share the same primary angles, even though they look very different visually.
+    We acknowledge this as a gap and propose $k$-aware metrics as future work (Section 8.4).
   </p>
 
   <h3>7.4 Interpretation of $E_{\mathrm{LdG}}$</h3>
@@ -471,6 +547,8 @@
     <li>All evaluation is metric-based. A human perceptual study would strengthen the conclusions.</li>
     <li>The experiment uses a single region size and tile size. Scalability to larger regions has not been tested.</li>
     <li>The 360-candidate grid for BFS is a discretisation; finer grids or continuous optimisation may improve results marginally.</li>
+    <li>The quality metrics are $k$-invariant: they capture only primary-angle structure and cannot evaluate the visual contribution of secondary hatch layers (see Section 7.3).</li>
+    <li>All conditions use Voronoi adjacency derived from Delaunay triangulation of tile centres. This ensures consistency between the BFS optimisation graph and metric evaluation, but other adjacency definitions (e.g. $k$-nearest-neighbours or radius-based) remain unexplored.</li>
   </ul>
 
   <!-- 8. Future Work -->
@@ -517,6 +595,18 @@
     while preserving the tile-based placement and adjacency-optimised angle assignment.
     The quality metrics could be adapted by defining an analogous RP&sup1; distance on the tangent direction
     of curved strokes at tile boundaries.
+  </p>
+
+  <h3>8.4 k-Aware Quality Metrics</h3>
+  <p>
+    As discussed in Section 7.3, the current metrics are $k$-invariant &mdash;
+    they depend only on the primary angle and cannot evaluate the visual contribution
+    of secondary hatch layers.
+    Future work should develop metrics that capture $k$-dependent properties,
+    such as the visual density contrast between adjacent tiles at different $k$ values,
+    the uniformity of angular coverage within each tile,
+    or perceptual texture similarity measures (e.g. SSIM-based comparisons
+    between generated and reference kakeami patterns at each $k$ level).
   </p>
 
   <!-- 9. References -->

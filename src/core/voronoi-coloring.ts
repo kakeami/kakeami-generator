@@ -11,6 +11,22 @@ import { buildVoronoiAdjacency } from './adjacency';
 const PI = Math.PI;
 
 /**
+ * Convert an adjacency list to a canonical edge list.
+ * Emits [i, j] for each edge where j > i (no duplicates).
+ */
+export function adjListToEdges(adj: number[][]): [number, number][] {
+  const edges: [number, number][] = [];
+  for (let i = 0; i < adj.length; i++) {
+    for (const j of adj[i]!) {
+      if (j > i) {
+        edges.push([i, j]);
+      }
+    }
+  }
+  return edges;
+}
+
+/**
  * BFS greedy angle assignment on an adjacency graph.
  *
  * Starting from the highest-degree node, assigns each tile an angle from 360
@@ -139,9 +155,12 @@ export function voronoiColoring(
   // BFS greedy angle assignment
   const thetas = bfsGreedyAngles(n, adj, rng);
 
+  // Store Voronoi edges so metrics use the same adjacency as BFS
+  const edges = adjListToEdges(adj);
+
   const tiles = centers.map(([cx, cy], i) =>
     new Tile(cx, cy, Block.standard(thetas[i]!, k, pitch)),
   );
 
-  return new KakeamiConfig(tiles, region, actualTileSize, actualTileSize, lineWeight);
+  return new KakeamiConfig(tiles, region, actualTileSize, actualTileSize, lineWeight, edges);
 }
