@@ -45,6 +45,65 @@ function polygonArea(polygon: ArrayLike<[number, number]>): number {
 }
 
 /**
+ * Convert edge list → adjacency list (inverse of adjListToEdges).
+ */
+export function edgesToAdjList(
+  edges: readonly [number, number][],
+  n: number,
+): number[][] {
+  const adj: number[][] = Array.from({ length: n }, () => []);
+  for (const [i, j] of edges) {
+    adj[i]!.push(j);
+    adj[j]!.push(i);
+  }
+  return adj;
+}
+
+/**
+ * Enumerate all pairs at exactly graph distance k.
+ * Returns canonical [i,j] pairs (i<j), deduplicated.
+ */
+export function kHopPairs(
+  edges: readonly [number, number][],
+  n: number,
+  k: number,
+): [number, number][] {
+  if (n === 0 || k <= 0) return [];
+  const adj = edgesToAdjList(edges, n);
+  const seen = new Set<string>();
+  const result: [number, number][] = [];
+
+  for (let src = 0; src < n; src++) {
+    // BFS from src
+    const dist = new Int32Array(n).fill(-1);
+    dist[src] = 0;
+    const queue = [src];
+    let head = 0;
+    while (head < queue.length) {
+      const u = queue[head++]!;
+      if (dist[u]! >= k) break;
+      for (const v of adj[u]!) {
+        if (dist[v] === -1) {
+          dist[v] = dist[u]! + 1;
+          queue.push(v);
+        }
+      }
+    }
+    // Collect distance-k nodes
+    for (let v = src + 1; v < n; v++) {
+      if (dist[v] === k) {
+        const key = `${src},${v}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push([src, v]);
+        }
+      }
+    }
+  }
+  return result;
+}
+
+/**
  * Build adjacency list from Delaunay triangulation.
  * For n < 4, returns a complete graph.
  */

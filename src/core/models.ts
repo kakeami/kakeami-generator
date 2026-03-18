@@ -4,6 +4,7 @@
 
 import { dRp1 } from './math-utils';
 import { rectMinDistance } from './geometry';
+import { kHopPairs } from './adjacency';
 
 const PI = Math.PI;
 
@@ -264,5 +265,24 @@ export class KakeamiConfig {
       }
     }
     return Math.log(nBins) > 0 ? h / Math.log(nBins) : 0;
+  }
+
+  /**
+   * Angle autocorrelation at graph distance k.
+   * R^(k) = (1/|E_k|) Σ cos 2(φᵢ - φⱼ)  for pairs at distance k.
+   * R^(k) ∈ [-1, 1]. R ≈ 0 indicates no angular correlation at distance k (aperiodic).
+   * R ≈ +1 indicates same-angle pairs (periodic). R ≈ -1 indicates perpendicular pairs.
+   */
+  rAuto(k: number): number {
+    const n = this.tiles.length;
+    if (n === 0) return 0;
+    const edges = this.adjacency();
+    const pairs = kHopPairs(edges, n, k);
+    if (pairs.length === 0) return 0;
+    let total = 0;
+    for (const [i, j] of pairs) {
+      total += Math.cos(2 * (this.tiles[i]!.phi - this.tiles[j]!.phi));
+    }
+    return total / pairs.length;
   }
 }

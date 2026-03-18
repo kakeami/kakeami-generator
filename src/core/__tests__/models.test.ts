@@ -193,6 +193,81 @@ describe('KakeamiConfig.uVor', () => {
   });
 });
 
+describe('KakeamiConfig.rAuto', () => {
+  it('checkerboard: R₁ ≈ -1 (perpendicular neighbours)', () => {
+    // 4x4 grid, alternating 0° and 90°
+    const tiles: Tile[] = [];
+    const edges: [number, number][] = [];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const angle = (r + c) % 2 === 0 ? 0 : PI / 2;
+        tiles.push(new Tile(c, r, Block.standard(angle, 1, 0.05)));
+      }
+    }
+    // Grid adjacency (4-connected)
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const idx = r * 4 + c;
+        if (c < 3) edges.push([idx, idx + 1]);
+        if (r < 3) edges.push([idx, idx + 4]);
+      }
+    }
+    const config = new KakeamiConfig(tiles, [0, 0, 4, 4], 1, 1, 0.5, edges);
+    expect(config.rAuto(1)).toBeCloseTo(-1, 1);
+  });
+
+  it('checkerboard: R₂ ≈ +1 (same-angle at distance 2)', () => {
+    const tiles: Tile[] = [];
+    const edges: [number, number][] = [];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const angle = (r + c) % 2 === 0 ? 0 : PI / 2;
+        tiles.push(new Tile(c, r, Block.standard(angle, 1, 0.05)));
+      }
+    }
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const idx = r * 4 + c;
+        if (c < 3) edges.push([idx, idx + 1]);
+        if (r < 3) edges.push([idx, idx + 4]);
+      }
+    }
+    const config = new KakeamiConfig(tiles, [0, 0, 4, 4], 1, 1, 0.5, edges);
+    expect(config.rAuto(2)).toBeCloseTo(1, 1);
+  });
+
+  it('all same angle: R_k = +1 for all k', () => {
+    const tiles = [
+      new Tile(0, 0, Block.standard(PI / 4, 1, 0.05)),
+      new Tile(1, 0, Block.standard(PI / 4, 1, 0.05)),
+      new Tile(2, 0, Block.standard(PI / 4, 1, 0.05)),
+      new Tile(3, 0, Block.standard(PI / 4, 1, 0.05)),
+    ];
+    const edges: [number, number][] = [[0, 1], [1, 2], [2, 3]];
+    const config = new KakeamiConfig(tiles, [0, 0, 4, 4], 1, 1, 0.5, edges);
+    expect(config.rAuto(1)).toBeCloseTo(1, 5);
+    expect(config.rAuto(2)).toBeCloseTo(1, 5);
+    expect(config.rAuto(3)).toBeCloseTo(1, 5);
+  });
+
+  it('returns 0 for empty config', () => {
+    const config = new KakeamiConfig([], [0, 0, 2, 2], 1, 1, 0.5);
+    expect(config.rAuto(1)).toBe(0);
+    expect(config.rAuto(2)).toBe(0);
+  });
+
+  it('returns 0 when no pairs at distance k', () => {
+    const tiles = [
+      new Tile(0, 0, Block.standard(0, 1, 0.05)),
+      new Tile(1, 0, Block.standard(PI / 2, 1, 0.05)),
+    ];
+    const edges: [number, number][] = [[0, 1]];
+    const config = new KakeamiConfig(tiles, [0, 0, 2, 2], 1, 1, 0.5, edges);
+    // Only 2 nodes, distance-2 pair doesn't exist
+    expect(config.rAuto(2)).toBe(0);
+  });
+});
+
 describe('KakeamiConfig.hAngle', () => {
   it('returns 0 for empty tiles', () => {
     const config = new KakeamiConfig([], [0, 0, 2, 2], 1, 1, 0.5);

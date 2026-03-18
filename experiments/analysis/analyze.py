@@ -39,31 +39,32 @@ CONDITION_LABELS = {
 }
 # Original 4 conditions for 2×2 ANOVA (gridCheckerboard is outside the factorial design)
 ANOVA_CONDITIONS = ["poissonBfs", "poissonRandom", "randomBfs", "randomRandom"]
-METRICS = ["eContrast", "eLdG", "sOrder", "cCov", "uVor", "hAngle"]
+METRICS = ["eContrast", "hAngle", "cCov", "uVor", "rAuto2", "rAuto3"]
 METRIC_LABELS = {
     "eContrast": r"$E_{\mathrm{contrast}}$",
-    "eLdG": r"$E_{\mathrm{LdG}}$",
-    "sOrder": r"$S$",
+    "hAngle": r"$H_{\mathrm{angle}}$",
     "cCov": r"$C_{\mathrm{cov}}$",
     "uVor": r"$U_{\mathrm{vor}}$",
-    "hAngle": r"$H_{\mathrm{angle}}$",
+    "rAuto2": r"$R_2$",
+    "rAuto3": r"$R_3$",
 }
 METRIC_LABELS_PLAIN = {
     "eContrast": "E_contrast",
-    "eLdG": "E_LdG",
-    "sOrder": "S",
+    "hAngle": "H_angle",
     "cCov": "C_cov",
     "uVor": "U_vor",
-    "hAngle": "H_angle",
+    "rAuto2": "R_2",
+    "rAuto3": "R_3",
 }
-# For E_contrast, E_LdG, C_cov, H_angle: higher is better; for S, U_vor: lower is better
+# For E_contrast, H_angle, C_cov: higher is better; for U_vor: lower is better
+# For R_2, R_3: |mean| closest to 0 is best (handled specially in best/second-best)
 METRIC_HIGHER_IS_BETTER = {
     "eContrast": True,
-    "eLdG": True,
-    "sOrder": False,
+    "hAngle": True,
     "cCov": True,
     "uVor": False,
-    "hAngle": True,
+    "rAuto2": None,  # special: |mean| closest to 0
+    "rAuto3": None,  # special: |mean| closest to 0
 }
 
 
@@ -91,7 +92,11 @@ def plot_boxplots(df: pd.DataFrame) -> None:
             patch.set_alpha(0.7)
 
         ax.tick_params(axis="x", rotation=45)
-        ax.set_ylim(0, 1)
+        if metric in ("rAuto2", "rAuto3"):
+            ax.set_ylim(-1, 1)
+            ax.axhline(y=0, color="#999", linewidth=0.8, linestyle="--", zorder=1)
+        else:
+            ax.set_ylim(0, 1)
         ax.grid(axis="y", alpha=0.3)
 
         plt.tight_layout()
@@ -108,7 +113,11 @@ def compute_best_cells(df: pd.DataFrame) -> dict:
         for cond in CONDITIONS:
             sub = df[df["condition"] == cond]
             means[CONDITION_LABELS[cond]] = sub[m].mean()
-        if METRIC_HIGHER_IS_BETTER[m]:
+        direction = METRIC_HIGHER_IS_BETTER[m]
+        if direction is None:
+            # R_k: |mean| closest to 0 is best
+            best_cond = min(means, key=lambda k: abs(means[k]))
+        elif direction:
             best_cond = max(means, key=means.get)
         else:
             best_cond = min(means, key=means.get)
@@ -124,7 +133,11 @@ def compute_second_best_cells(df: pd.DataFrame) -> dict:
         for cond in CONDITIONS:
             sub = df[df["condition"] == cond]
             means[CONDITION_LABELS[cond]] = sub[m].mean()
-        if METRIC_HIGHER_IS_BETTER[m]:
+        direction = METRIC_HIGHER_IS_BETTER[m]
+        if direction is None:
+            # R_k: sort by |mean|
+            sorted_conds = sorted(means, key=lambda k: abs(means[k]))
+        elif direction:
             sorted_conds = sorted(means, key=means.get, reverse=True)
         else:
             sorted_conds = sorted(means, key=means.get)

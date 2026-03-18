@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildVoronoiAdjacency, voronoiCellAreas } from '../adjacency';
+import { buildVoronoiAdjacency, voronoiCellAreas, edgesToAdjList, kHopPairs } from '../adjacency';
 
 describe('buildVoronoiAdjacency', () => {
   it('n<4 returns complete graph', () => {
@@ -48,6 +48,77 @@ describe('buildVoronoiAdjacency', () => {
     expect(adj.length).toBe(9);
     // Center node (1,1) = index 4 should have many neighbors
     expect(adj[4]!.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('edgesToAdjList', () => {
+  it('converts edges to adjacency list', () => {
+    const edges: [number, number][] = [[0, 1], [1, 2]];
+    const adj = edgesToAdjList(edges, 3);
+    expect(adj[0]).toEqual([1]);
+    expect(adj[1]).toEqual([0, 2]);
+    expect(adj[2]).toEqual([1]);
+  });
+
+  it('returns empty lists for no edges', () => {
+    const adj = edgesToAdjList([], 3);
+    expect(adj).toEqual([[], [], []]);
+  });
+
+  it('roundtrips with adjListToEdges-like structure', () => {
+    // Triangle: 0-1, 0-2, 1-2
+    const edges: [number, number][] = [[0, 1], [0, 2], [1, 2]];
+    const adj = edgesToAdjList(edges, 3);
+    expect(adj[0]!.sort()).toEqual([1, 2]);
+    expect(adj[1]!.sort()).toEqual([0, 2]);
+    expect(adj[2]!.sort()).toEqual([0, 1]);
+  });
+});
+
+describe('kHopPairs', () => {
+  it('linear chain: distance-1 pairs', () => {
+    // 0-1-2-3
+    const edges: [number, number][] = [[0, 1], [1, 2], [2, 3]];
+    const pairs = kHopPairs(edges, 4, 1);
+    expect(pairs.sort()).toEqual([[0, 1], [1, 2], [2, 3]]);
+  });
+
+  it('linear chain: distance-2 pairs', () => {
+    // 0-1-2-3
+    const edges: [number, number][] = [[0, 1], [1, 2], [2, 3]];
+    const pairs = kHopPairs(edges, 4, 2);
+    expect(pairs.sort()).toEqual([[0, 2], [1, 3]]);
+  });
+
+  it('linear chain: distance-3 pairs', () => {
+    // 0-1-2-3
+    const edges: [number, number][] = [[0, 1], [1, 2], [2, 3]];
+    const pairs = kHopPairs(edges, 4, 3);
+    expect(pairs).toEqual([[0, 3]]);
+  });
+
+  it('triangle: no distance-2 pairs', () => {
+    // Complete K3: 0-1, 0-2, 1-2 → all at distance 1
+    const edges: [number, number][] = [[0, 1], [0, 2], [1, 2]];
+    const pairs = kHopPairs(edges, 3, 2);
+    expect(pairs).toEqual([]);
+  });
+
+  it('4-cycle: distance-2 pairs are diagonals', () => {
+    // 0-1-2-3-0
+    const edges: [number, number][] = [[0, 1], [1, 2], [2, 3], [0, 3]];
+    const pairs = kHopPairs(edges, 4, 2);
+    expect(pairs.sort()).toEqual([[0, 2], [1, 3]]);
+  });
+
+  it('empty graph returns empty', () => {
+    expect(kHopPairs([], 0, 1)).toEqual([]);
+    expect(kHopPairs([], 3, 1)).toEqual([]);
+  });
+
+  it('k=0 returns empty', () => {
+    const edges: [number, number][] = [[0, 1]];
+    expect(kHopPairs(edges, 2, 0)).toEqual([]);
   });
 });
 

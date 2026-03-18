@@ -43,6 +43,8 @@ interface ExperimentResult {
   cCov: number;
   uVor: number;
   hAngle: number;
+  rAuto2: number;
+  rAuto3: number;
   wallTimeMs: number;
   svgString: string;
 }

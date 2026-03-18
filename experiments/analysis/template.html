@@ -16,7 +16,7 @@
   3. Formulation
      3.1 Angle Space
      3.2 Data Structure Hierarchy
-     3.3 Quality Metrics (Angular: E_contrast, E_LdG, S, H_angle; Spatial: C_cov, U_vor)
+     3.3 Quality Metrics (Angular: E_contrast, H_angle; Aperiodicity: R_2, R_3; Spatial: C_cov, U_vor)
   4. Method
      4.1 Algorithm Pipeline Overview
      4.2 Tile Placement Strategies
@@ -31,18 +31,17 @@
   7. Discussion
      7.1 Effect of Angle Assignment
      7.2 Effect of Tile Placement
-     7.3 The Checkerboard Problem and Angle Entropy
-     7.4 Interpretation of E_LdG
-     7.5 Scalar Order Parameter
-     7.6 k-Invariance of Quality Metrics
-     7.7 Limitations
+     7.3 Checkerboard as Crystalline Order
+     7.4 Aperiodicity Detection via R_k
+     7.5 k-Invariance of Quality Metrics
+     7.6 Limitations
   8. Future Work
      8.1 Tonal Gradation via Spatially Varying k
      8.2 Generalisation to Arbitrary Pattern Tiles
          8.2.1 Non-Line Fill Patterns in Rectangular Tiles
          8.2.2 Non-Rectangular Tile Shapes
      8.3 Nawaami (Curved-Line Hatching)
-     8.4 Connection to Mathematical Tiling Problems
+     8.4 Connection to Quasicrystalline Order
      8.5 k-Aware Quality Metrics
   9. Conclusion
   10. References
@@ -164,19 +163,22 @@
     for defining kakeami quality or evaluating automatic generation algorithms.
     This report presents the first mathematical formulation of kakeami quality,
     proposing six complementary metrics &mdash;
-    angle contrast ($E_{\mathrm{contrast}}$), Landau&ndash;de Gennes energy ($E_{\mathrm{LdG}}$),
-    scalar order parameter ($S$), angle entropy ($H_{\mathrm{angle}}$),
+    angle contrast ($E_{\mathrm{contrast}}$), angle entropy ($H_{\mathrm{angle}}$),
+    angle autocorrelation at graph distances 2 and 3 ($R_2$, $R_3$),
     coverage ratio ($C_{\mathrm{cov}}$), and Voronoi cell area CV ($U_{\mathrm{vor}}$) &mdash;
-    drawing on concepts from nematic liquid crystal physics and direction field theory.
+    drawing on concepts from quasicrystalline order and spatial statistics.
+    We argue that good kakeami exhibits <em>quasicrystalline order</em>:
+    short-range angular contrast (high $E_{\mathrm{contrast}}$) without long-range periodic repetition ($R_k \approx 0$).
     We conduct a controlled 2&times;2 factorial experiment (tile placement &times; angle assignment)
     with 100 random seeds, supplemented by a deterministic grid-checkerboard reference condition.
     Two-way ANOVA reveals that angle assignment is the dominant factor
-    ($\eta^2 \approx 0.94$ for $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$),
+    ($\eta^2 \approx 0.94$ for $E_{\mathrm{contrast}}$, $\eta^2 \approx 0.89$ for $R_2$),
     and the proposed Poisson-disk + BFS greedy combination achieves the best overall quality.
-    The checkerboard reference condition demonstrates a metric vulnerability &mdash;
-    optimal scores on $S$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ despite a visually mechanical pattern &mdash;
-    resolved by the angle entropy $H_{\mathrm{angle}}$,
-    which penalises limited angle diversity ($H_{\mathrm{angle}} \approx 0.28$ vs. $\geq 0.95$ for BFS conditions).
+    The $R_k$ autocorrelation metrics reveal the structure of angle correlations beyond immediate neighbours:
+    random conditions show $R_2 \approx 0$ (no correlation),
+    while BFS greedy introduces a mild positive $R_2$ as a side effect of local contrast maximisation.
+    The checkerboard&rsquo;s low angle diversity ($H_{\mathrm{angle}} \approx 0.28$ vs. $\geq 0.95$ for BFS)
+    remains the clearest discriminator of its mechanical character.
   </p>
 
   <!-- 1. Introduction -->
@@ -200,7 +202,14 @@
   <p>
     Despite its importance in manga production, no academic paper has formally defined kakeami
     or evaluated automatic generation algorithms quantitatively.
-    This report presents the first mathematical formulation of kakeami quality
+    We identify five properties of good kakeami:
+    (1) <em>local angular contrast</em> &mdash; neighbouring tiles should differ in angle;
+    (2) <em>angle diversity</em> &mdash; a rich variety of orientations, not just two;
+    (3) <em>spatial coverage</em> &mdash; no visible gaps between tiles;
+    (4) <em>spatial uniformity</em> &mdash; evenly distributed tile centres; and
+    (5) <em>aperiodicity</em> &mdash; no long-range periodic repetition of angles.
+    This last property distinguishes natural-looking kakeami from mechanical patterns like a checkerboard.
+    We propose a six-metric framework that independently measures each property
     and a controlled 2&times;2 factorial experiment evaluating two independent components of a proposed algorithm:
     <strong>tile placement</strong> (Poisson-disk vs. uniform random)
     and <strong>angle assignment</strong> (BFS greedy vs. random).
@@ -275,9 +284,8 @@
     In this section, we propose a novel mathematical formulation that addresses this gap.
     The data structures (Section 3.2) mirror the manual drawing process,
     while the quality metrics (Section 3.3) are original contributions of this work,
-    drawing inspiration from nematic liquid crystal physics and direction field theory
-    to capture the key perceptual properties of kakeami &mdash;
-    local angular contrast, anti-ferromagnetic ordering, and global isotropy.
+    capturing the five key properties of good kakeami identified in Section 1 &mdash;
+    local angular contrast, angle diversity, aperiodicity, spatial coverage, and spatial uniformity.
   </p>
 
   <h3>3.1 Angle Space</h3>
@@ -306,10 +314,11 @@
   <p>
     Given a configuration $K$ and its adjacency edge set $E$
     (Voronoi adjacency edges derived from Delaunay triangulation of tile centres),
-    we propose six complementary metrics split across two axes:
-    four <em>angular</em> metrics evaluating orientation quality
+    we propose six complementary metrics split across three axes:
+    two <em>angular</em> metrics evaluating local orientation quality,
+    two <em>aperiodicity</em> metrics detecting long-range periodic repetition,
     and two <em>spatial</em> metrics evaluating placement quality.
-    Together they provide a comprehensive quantitative evaluation framework.
+    Together they independently measure the five properties of good kakeami (Section 1).
     To the best of our knowledge, these metrics have not been previously defined for hatching evaluation.
   </p>
   <h4>Angular Metrics</h4>
@@ -323,28 +332,6 @@
     which is the defining visual characteristic of kakeami.
   </p>
 
-  <h4>Landau&ndash;de Gennes Energy $E_{\mathrm{LdG}}$</h4>
-  <p>
-    Inspired by the nematic liquid crystal order parameter and
-    the Ginzburg&ndash;Landau energy functional used in cross field design (Beaufort et al., 2017),
-    we define a discrete analogue:
-    $$E_{\mathrm{LdG}} = \frac{1}{|E|} \sum_{(i,j) \in E} \sin^2(\phi_i - \phi_j) \;\in [0, 1]$$
-    This measures the tendency towards anti-ferromagnetic ordering on the adjacency graph.
-    $E_{\mathrm{LdG}} = 0$ indicates uniform alignment (all tiles parallel);
-    $E_{\mathrm{LdG}} = 0.5$ corresponds to random orientations;
-    $E_{\mathrm{LdG}} > 0.5$ indicates active angle repulsion beyond random &mdash; desirable for kakeami.
-  </p>
-
-  <h4>Scalar Order Parameter $S$</h4>
-  <p>
-    Borrowed from nematic liquid crystal physics, $S$ measures global orientational order:
-    $$S = \left| \frac{1}{n} \sum_{i=1}^{n} e^{2i\phi_i} \right| \;\in [0, 1]$$
-    $S = 0$ indicates perfect isotropy (all angles equally represented);
-    $S = 1$ indicates all tiles share the same angle.
-    For kakeami, low $S$ is desirable &mdash; we want diverse, well-distributed angles
-    rather than a dominant orientation.
-  </p>
-
   <h4>Angle Entropy $H_{\mathrm{angle}}$</h4>
   <p>
     The normalised Shannon entropy of the primary-angle distribution measures how diverse
@@ -355,8 +342,32 @@
     $H_{\mathrm{angle}} = 1$ indicates a perfectly uniform distribution of angles across all bins;
     $H_{\mathrm{angle}} = 0$ means all tiles share the same angle.
     A checkerboard pattern using only 0&deg; and 90&deg; achieves
-    $H_{\mathrm{angle}} = \ln 2 / \ln 12 \approx 0.28$, revealing its limited angle diversity
-    despite achieving high scores on all other angular metrics.
+    $H_{\mathrm{angle}} = \ln 2 / \ln 12 \approx 0.28$, revealing its limited angle diversity.
+  </p>
+
+  <h4>Aperiodicity Metrics</h4>
+
+  <h4>Angle Autocorrelation $R_k$</h4>
+  <p>
+    To detect long-range periodic repetition of angles, we define the angle autocorrelation
+    at graph distance $k$:
+    $$R_k = \frac{1}{|E_k|} \sum_{(i,j) \in E_k} \cos 2(\phi_i - \phi_j) \;\in [-1, 1]$$
+    where $E_k$ is the set of tile pairs at graph distance exactly $k$
+    (computed via BFS on the adjacency graph).
+    $R_k = +1$ indicates that tiles at distance $k$ share the same angle (periodic repetition);
+    $R_k = -1$ indicates perpendicular alignment;
+    $R_k \approx 0$ indicates no angular correlation at distance $k$ (aperiodic).
+    For kakeami, $|R_k| \approx 0$ for $k \geq 2$ is desirable &mdash; good local contrast ($R_1 \approx -1$)
+    should not produce long-range patterns.
+    We report $R_2$ and $R_3$.
+  </p>
+  <p>
+    <strong>Relationship to $E_{\mathrm{LdG}}$.</strong>
+    The previously used Landau&ndash;de Gennes energy $E_{\mathrm{LdG}} = \frac{1}{|E|} \sum_{(i,j) \in E} \sin^2(\phi_i - \phi_j)$
+    is mathematically equivalent to $(1 - R_1) / 2$ (where $R_1$ is the lag-1 autocorrelation).
+    Since $E_{\mathrm{LdG}}$ is monotonically related to $E_{\mathrm{contrast}}$ and provides no independent information,
+    we replace it with the lag-2 and lag-3 autocorrelations $R_2$ and $R_3$,
+    which capture genuinely new information about aperiodicity.
   </p>
 
   <h4>Spatial Metrics</h4>
@@ -446,12 +457,12 @@
     Angles alternate between 0&deg; and 90&deg; in a checkerboard pattern:
     tiles at even $(r + c)$ positions receive 0&deg;, odd positions receive 90&deg;.
     This condition is entirely deterministic (identical across all seeds)
-    and serves to demonstrate the <em>checkerboard hack</em>:
-    a simple regular pattern that achieves optimal scores on
-    $S$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$,
-    and competitive scores on $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$,
-    while producing a visually mechanical, non-natural result.
-    The angle entropy $H_{\mathrm{angle}}$ is specifically designed to penalise this configuration.
+    and serves as a <em>crystalline order</em> reference:
+    a periodic pattern that achieves competitive local contrast
+    and optimal spatial metrics ($C_{\mathrm{cov}} = 1$, $U_{\mathrm{vor}} = 0$),
+    but exhibits limited angle diversity ($H_{\mathrm{angle}} \approx 0.28$)
+    and a periodic $R_k$ structure,
+    producing a visually mechanical, non-natural result.
   </p>
   <p>
     The $8 \times 8$ grid size was chosen to approximately match the Poisson-disk tile count (~69),
@@ -464,7 +475,7 @@
     To evaluate the five conditions defined in Section 4,
     we run a controlled experiment with {{ n_seeds }} random seeds.
     All quality metrics are computed at $k = 1$ only, because the metrics
-    ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $H_{\mathrm{angle}}$)
+    ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_2$, $R_3$)
     depend solely on the primary angle $\phi_i$ of each tile
     and are therefore invariant to the kake count $k$.
     Representative images are rendered at $k = 1, 2, 3, 4$
@@ -499,7 +510,7 @@
     All five conditions use Voronoi adjacency (derived from Delaunay triangulation of tile centres)
     for both BFS optimisation and metric evaluation.
     This ensures that the adjacency graph over which the BFS greedy algorithm maximises contrast
-    is identical to the graph used to compute $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$.
+    is identical to the graph used to compute $E_{\mathrm{contrast}}$ and $R_k$.
   </p>
   <p>
     <strong>Software.</strong>
@@ -513,7 +524,8 @@
   <!-- 6. Results -->
   <h2>6. Results</h2>
   <p>
-    We present the experimental results using the six quality metrics defined in Section 3.
+    We present the experimental results using the six quality metrics defined in Section 3
+    ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_2$, $R_3$, $C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
     All metrics are computed at $k = 1$.
     Section 6.1 shows box plots, Section 6.2 provides summary statistics,
     Section 6.3 presents the statistical analysis (two-way ANOVA and effect sizes),
@@ -527,14 +539,14 @@
     Its role as a metric-vulnerability demonstration is discussed in Section 7.3.
   </p>
 
-  {% for metric in ['eContrast', 'eLdG', 'sOrder', 'hAngle', 'cCov', 'uVor'] %}
+  {% for metric in ['eContrast', 'hAngle', 'rAuto2', 'rAuto3', 'cCov', 'uVor'] %}
   <figure>
     <img src="assets/boxplot_{{ metric }}.png" alt="Box plot of {{ metric }}" />
     <figcaption>
       {% if metric == 'eContrast' %}Figure 2: $E_{\mathrm{contrast}}$ distribution across conditions ($k = 1$, {{ n_seeds }} seeds).
-      {% elif metric == 'eLdG' %}Figure 3: $E_{\mathrm{LdG}}$ distribution. Values above 0.5 indicate anti-ferromagnetic ordering beyond random.
-      {% elif metric == 'sOrder' %}Figure 4: Scalar order parameter $S$. Lower values indicate better angular isotropy.
-      {% elif metric == 'hAngle' %}Figure 5: Angle entropy $H_{\mathrm{angle}}$. Higher values indicate more diverse angle usage. The Grid + Checkerboard condition scores notably low ($\approx 0.28$) due to using only two angles.
+      {% elif metric == 'hAngle' %}Figure 3: Angle entropy $H_{\mathrm{angle}}$. Higher values indicate more diverse angle usage. The Grid + Checkerboard condition scores notably low ($\approx 0.28$) due to using only two angles.
+      {% elif metric == 'rAuto2' %}Figure 4: Angle autocorrelation $R_2$ (distance 2). BFS greedy conditions show mild positive $R_2$ (greedy side effect); random conditions cluster near 0.
+      {% elif metric == 'rAuto3' %}Figure 5: Angle autocorrelation $R_3$ (distance 3). The aperiodic conditions cluster near 0, while the checkerboard diverges.
       {% elif metric == 'cCov' %}Figure 6: Coverage ratio $C_{\mathrm{cov}}$. Higher values mean less visible background.
       {% else %}Figure 7: Voronoi cell area CV $U_{\mathrm{vor}}$. Lower values indicate more uniform tile spacing.{% endif %}
     </figcaption>
@@ -547,8 +559,9 @@
     indicate the best-performing condition for that metric;
     cells with a <span style="background: var(--color-second-best); padding: 0.1em 0.3em;">light green background</span>
     indicate the second-best condition.
-    Direction: higher is better for $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $H_{\mathrm{angle}}$, and $C_{\mathrm{cov}}$;
-    lower is better for $S$ and $U_{\mathrm{vor}}$.
+    Direction: higher is better for $E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, and $C_{\mathrm{cov}}$;
+    lower is better for $U_{\mathrm{vor}}$;
+    $|R_k|$ closest to 0 is best for $R_2$ and $R_3$.
     All metrics computed at $k = 1$.
   </p>
 
@@ -556,9 +569,9 @@
     <tr>
       <th>Condition</th>
       <th>$E_{\mathrm{contrast}}$</th>
-      <th>$E_{\mathrm{LdG}}$</th>
-      <th>$S$</th>
       <th>$H_{\mathrm{angle}}$</th>
+      <th>$R_2$</th>
+      <th>$R_3$</th>
       <th>$C_{\mathrm{cov}}$</th>
       <th>$U_{\mathrm{vor}}$</th>
       <th>Tiles</th>
@@ -568,9 +581,9 @@
     <tr{% if row.condition == 'Grid + Checkerboard' %} style="font-style: italic;"{% endif %}>
       <td>{{ row.condition }}{% if row.condition == 'Grid + Checkerboard' %}&thinsp;*{% endif %}</td>
       <td{% if best_cells.get('E_contrast') == row.condition %} class="best"{% elif second_best_cells.get('E_contrast') == row.condition %} class="second-best"{% endif %}>{{ row.E_contrast }}</td>
-      <td{% if best_cells.get('E_LdG') == row.condition %} class="best"{% elif second_best_cells.get('E_LdG') == row.condition %} class="second-best"{% endif %}>{{ row.E_LdG }}</td>
-      <td{% if best_cells.get('S') == row.condition %} class="best"{% elif second_best_cells.get('S') == row.condition %} class="second-best"{% endif %}>{{ row.S }}</td>
       <td{% if best_cells.get('H_angle') == row.condition %} class="best"{% elif second_best_cells.get('H_angle') == row.condition %} class="second-best"{% endif %}>{{ row.H_angle }}</td>
+      <td{% if best_cells.get('R_2') == row.condition %} class="best"{% elif second_best_cells.get('R_2') == row.condition %} class="second-best"{% endif %}>{{ row.R_2 }}</td>
+      <td{% if best_cells.get('R_3') == row.condition %} class="best"{% elif second_best_cells.get('R_3') == row.condition %} class="second-best"{% endif %}>{{ row.R_3 }}</td>
       <td{% if best_cells.get('C_cov') == row.condition %} class="best"{% elif second_best_cells.get('C_cov') == row.condition %} class="second-best"{% endif %}>{{ row.C_cov }}</td>
       <td{% if best_cells.get('U_vor') == row.condition %} class="best"{% elif second_best_cells.get('U_vor') == row.condition %} class="second-best"{% endif %}>{{ row.U_vor }}</td>
       <td>{{ row["nTiles (mean)"] }}</td>
@@ -595,7 +608,7 @@
   </p>
 
   {% for metric_plain, rows in anova_data.items() %}
-  <h4>ANOVA: ${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('E_LdG', 'E_{\\mathrm{LdG}}').replace('H_angle', 'H_{\\mathrm{angle}}').replace('C_cov', 'C_{\\mathrm{cov}}').replace('U_vor', 'U_{\\mathrm{vor}}') }}$</h4>
+  <h4>ANOVA: ${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('H_angle', 'H_{\\mathrm{angle}}').replace('C_cov', 'C_{\\mathrm{cov}}').replace('U_vor', 'U_{\\mathrm{vor}}').replace('R_2', 'R_2').replace('R_3', 'R_3') }}$</h4>
   <table>
     <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
     {% for row in rows %}
@@ -618,7 +631,7 @@
   </p>
 
   {% for metric_plain, pairs in effect_data.items() %}
-  <h4>${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('E_LdG', 'E_{\\mathrm{LdG}}').replace('H_angle', 'H_{\\mathrm{angle}}').replace('C_cov', 'C_{\\mathrm{cov}}').replace('U_vor', 'U_{\\mathrm{vor}}') }}$</h4>
+  <h4>${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('H_angle', 'H_{\\mathrm{angle}}').replace('C_cov', 'C_{\\mathrm{cov}}').replace('U_vor', 'U_{\\mathrm{vor}}').replace('R_2', 'R_2').replace('R_3', 'R_3') }}$</h4>
   <table>
     <tr><th>Pair</th><th>Cohen's $d$</th></tr>
     {% for pair in pairs %}
@@ -651,10 +664,10 @@
   <p>
     The results in Section 6 reveal clear performance differences among the five conditions.
     Sections 7.1&ndash;7.2 analyse the two factors of the 2&times;2 factorial design,
-    Section 7.3 examines the fifth condition (Grid + Checkerboard) and the metric vulnerability it exposes,
-    Sections 7.4&ndash;7.5 interpret individual metrics through the nematic liquid crystal analogy,
-    Section 7.6 discusses $k$-invariance of the metric framework,
-    and Section 7.7 identifies limitations.
+    Section 7.3 reinterprets the checkerboard condition through the lens of crystalline vs. quasicrystalline order,
+    Section 7.4 discusses what the $R_k$ autocorrelation metrics reveal about aperiodicity,
+    Section 7.5 discusses $k$-invariance of the metric framework,
+    and Section 7.6 identifies limitations.
   </p>
 
   <h3>7.1 Effect of Angle Assignment</h3>
@@ -662,15 +675,14 @@
     The two-way ANOVA confirms that the angle assignment strategy is the dominant factor.
     For $E_{\mathrm{contrast}}$, the angle factor shows a large effect size ($\eta^2$),
     indicating that BFS greedy assignment accounts for the majority of variance in angle contrast.
-    The BFS greedy strategy consistently outperforms random angle assignment on both
-    $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$,
+    The BFS greedy strategy consistently outperforms random angle assignment on $E_{\mathrm{contrast}}$,
     confirming that local contrast maximisation via the adjacency graph
     is the primary driver of visual quality.
   </p>
 
   <h3>7.2 Effect of Tile Placement</h3>
   <p>
-    While the angular metrics ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$)
+    While the angular metrics ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$)
     show little sensitivity to placement strategy,
     the spatial metrics reveal a stark difference.
     Poisson-disk placement achieves near-perfect coverage ($C_{\mathrm{cov}} \approx 1$)
@@ -684,57 +696,60 @@
     that the angular metrics alone cannot detect.
   </p>
 
-  <h3>7.3 The Checkerboard Problem and Angle Entropy</h3>
+  <h3>7.3 Checkerboard as Crystalline Order</h3>
   <p>
-    The Grid + Checkerboard condition demonstrates a fundamental vulnerability
-    in the original five-metric framework ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
+    The Grid + Checkerboard condition can be understood through the analogy
+    of crystalline vs. quasicrystalline order from condensed matter physics.
     By placing tiles on a regular grid and alternating between just two angles (0&deg; and 90&deg;),
-    the checkerboard achieves optimal or competitive scores on most of these metrics:
-    orthogonal neighbours differ by the maximum 90&deg; (though Delaunay triangulation
-    adds diagonal edges between same-angle tiles, reducing $E_{\mathrm{contrast}}$ and $E_{\mathrm{LdG}}$ below the theoretical maximum),
-    zero $S$ (the two symmetric angles cancel perfectly in the order parameter),
-    full coverage ($C_{\mathrm{cov}} = 1$),
-    and zero spatial variation ($U_{\mathrm{vor}} = 0$).
+    the checkerboard creates a <em>crystalline</em> pattern with competitive local contrast
+    but severely limited angle diversity ($H_{\mathrm{angle}} \approx 0.28$, using only 2 of 12 bins).
+    The Delaunay triangulation of the grid adds diagonal edges between same-angle tiles,
+    which moderates the checkerboard&rsquo;s $E_{\mathrm{contrast}}$ below the theoretical maximum
+    and produces a modest $R_2$ rather than the ideal $+1$ of a pure 4-connected grid.
   </p>
   <p>
-    Yet the resulting pattern is visually mechanical and repetitive &mdash;
-    clearly inferior to the organic, varied appearance produced by the Poisson + BFS algorithm.
-    The angle entropy $H_{\mathrm{angle}}$ resolves this discrepancy:
-    the checkerboard uses only 2 of 12 angle bins,
-    yielding $H_{\mathrm{angle}} \approx \ln 2 / \ln 12 \approx 0.28$,
-    far below the BFS conditions ($H_{\mathrm{angle}} \approx 0.95$+).
-    This confirms that angle diversity &mdash; using a rich variety of orientations, not just two &mdash;
-    is essential for natural-looking kakeami,
-    and that $H_{\mathrm{angle}}$ captures a quality dimension the other metrics miss.
+    The $R_k$ metrics reveal the structure of angle correlations in each condition.
+    BFS greedy conditions exhibit a mild positive $R_2 \approx 0.17$:
+    maximising local contrast at each BFS step introduces a small same-angle correlation at distance 2,
+    an expected side effect of greedy optimisation on finite-degree graphs.
+    Random-angle conditions show $R_2 \approx 0$ (no correlation at any distance), as expected.
+    The checkerboard&rsquo;s $R_2 \approx 0.24$ is the highest, consistent with its periodic structure,
+    though Delaunay diagonal edges dilute the purely 2-periodic signature.
   </p>
   <p>
+    The most robust discriminator of the checkerboard&rsquo;s mechanical character
+    remains $H_{\mathrm{angle}} \approx 0.28$ vs. $\geq 0.95$ for BFS conditions:
+    using only two angles produces a visually repetitive pattern
+    regardless of how well those angles contrast locally.
     The gridCheckerboard condition uses 64 tiles (8&times;8 grid),
     comparable to the ~69 tiles of Poisson-disk conditions,
     enabling direct metric comparison.
-    The zero-variance box plots for gridCheckerboard (identical results across all seeds)
-    further emphasise its deterministic, non-natural character.
   </p>
 
-  <h3>7.4 Interpretation of $E_{\mathrm{LdG}}$</h3>
+  <h3>7.4 Aperiodicity Detection via $R_k$</h3>
   <p>
-    For BFS conditions, $E_{\mathrm{LdG}}$ consistently exceeds 0.5, indicating anti-ferromagnetic ordering &mdash;
-    adjacent tiles actively repel each other's angles beyond what random chance would produce.
-    Recalling the nematic analogy from Section 3, this means the BFS algorithm creates configurations
-    where neighbouring &ldquo;directors&rdquo; tend towards perpendicular alignment,
-    the hallmark of effective kakeami generation.
+    The $R_k$ autocorrelation metrics extend the analysis beyond nearest-neighbour contrast.
+    Two-way ANOVA confirms that the angle assignment strategy is the dominant factor for $R_2$
+    ($\eta^2 \approx 0.89$): BFS greedy conditions show $R_2 \approx 0.17$ while random conditions
+    show $R_2 \approx 0$.
+    The positive $R_2$ of BFS conditions reflects a structural side effect of greedy local maximisation:
+    when each tile is assigned the angle most different from its already-placed neighbours,
+    tiles at distance 2 tend to share similar angles (because both were pushed away from the same intermediate tile).
+    At distance 3, this effect attenuates ($R_3 \approx -0.07$ for BFS, $\approx 0$ for random).
   </p>
-
-  <h3>7.5 Scalar Order Parameter</h3>
   <p>
-    Low $S$ values for BFS conditions indicate good global isotropy: no single angle dominates.
-    Random angle assignment produces slightly higher $S$ variance, as uniform sampling can accidentally
-    produce correlated angles in small samples.
+    The relationship $E_{\mathrm{LdG}} = (1 - R_1)/2$ (Section 3.3) explains why the previously used
+    Landau&ndash;de Gennes energy was redundant with $E_{\mathrm{contrast}}$:
+    both measure the same lag-1 angular repulsion, merely with different transformations.
+    The lag-2 and lag-3 autocorrelations $R_2$ and $R_3$ capture a genuinely independent property &mdash;
+    the spatial structure of angle correlations beyond immediate neighbours &mdash;
+    that $E_{\mathrm{contrast}}$ alone cannot detect.
   </p>
 
-  <h3>7.6 $k$-Invariance of Quality Metrics</h3>
+  <h3>7.5 $k$-Invariance of Quality Metrics</h3>
   <p>
     An important property of all six quality metrics is their invariance to the kake count $k$.
-    All six metrics &mdash; $E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $H_{\mathrm{angle}}$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ &mdash;
+    All six metrics &mdash; $E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_2$, $R_3$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ &mdash;
     depend only on the primary angle $\phi_i$ of each tile,
     which is determined entirely by the tile placement and angle assignment strategies.
     The secondary strokes added for $k \geq 2$ (at fixed angular offsets of 45&deg;, 90&deg;, etc.)
@@ -747,12 +762,12 @@
     We acknowledge this as a gap and propose $k$-aware metrics as future work (Section 8.5).
   </p>
 
-  <h3>7.7 Limitations</h3>
+  <h3>7.6 Limitations</h3>
   <ul>
     <li>All evaluation is metric-based. A human perceptual study would strengthen the conclusions.</li>
     <li>The experiment uses a single region size and tile size. Scalability to larger regions has not been tested.</li>
     <li>The 360-candidate grid for BFS is a discretisation; finer grids or continuous optimisation may improve results marginally.</li>
-    <li>The quality metrics are $k$-invariant: they capture only primary-angle structure and cannot evaluate the visual contribution of secondary hatch layers (see Section 7.6).</li>
+    <li>The quality metrics are $k$-invariant: they capture only primary-angle structure and cannot evaluate the visual contribution of secondary hatch layers (see Section 7.5).</li>
     <li>All conditions use Voronoi adjacency derived from Delaunay triangulation of tile centres. This ensures consistency between the BFS optimisation graph and metric evaluation, but other adjacency definitions (e.g. $k$-nearest-neighbours or radius-based) remain unexplored.</li>
     <li>The Grid + Checkerboard condition uses a slightly different tile count (64 vs. ~69) than the Poisson-disk conditions due to its regular grid spacing, though the difference (~7%) is small enough to permit direct metric comparison (see Section 7.3).</li>
   </ul>
@@ -795,7 +810,7 @@
     without drawing any continuous line.
     Other candidates include small crosses, short dashes, concentric arcs, or any oriented motif.
     Because the fill is independent of the placement framework,
-    the same quality metrics ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$) remain valid:
+    the same quality metrics ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_k$) remain valid:
     they depend only on the primary angle $\phi_i$ of each tile,
     not on how that angle is visually manifested inside the tile.
   </p>
@@ -849,17 +864,16 @@
     of curved strokes at tile boundaries.
   </p>
 
-  <h3>8.4 Connection to Mathematical Tiling Problems</h3>
+  <h3>8.4 Connection to Quasicrystalline Order</h3>
   <p>
-    The tile placement problem studied in this report has deep connections
-    to classical tiling and tessellation theory.
-    The Voronoi-based partition generated by Poisson-disk sampling creates
-    an aperiodic space-filling coverage of the plane analogous to well-known aperiodic tilings
-    such as Penrose tilings and Wang tiles (Gr&uuml;nbaum &amp; Shephard, 1987).
-    Unlike periodic lattice arrangements, the blue-noise property of Poisson-disk sampling
-    ensures that no translational symmetry exists,
-    while the minimum distance guarantee provides a regularity constraint
-    comparable to the matching rules of aperiodic prototile sets.
+    The $R_k$ autocorrelation metrics introduced in this work provide a natural bridge
+    between kakeami generation and the theory of quasicrystals.
+    In condensed matter physics, quasicrystals are characterised by
+    sharp diffraction peaks (indicating local order) without translational periodicity
+    (Shechtman et al., 1984).
+    The Poisson + BFS kakeami patterns exhibit a related structure:
+    strong nearest-neighbour contrast (negative $R_1$)
+    with rapidly decaying angular correlation at longer ranges ($R_2 \approx 0.17$, $R_3 \approx -0.07$).
   </p>
   <p>
     The angle assignment step can be viewed through the lens of graph colouring:
@@ -872,27 +886,23 @@
     we maximise rather than minimise the distance between neighbouring labels.
   </p>
   <p>
-    The quality metrics defined in Section 3 formalise these &ldquo;tiling rules&rdquo;
-    in a continuous angle space.
-    $E_{\mathrm{contrast}}$ measures the mean edge mismatch (analogous to the fraction of
-    satisfied constraints in a constraint satisfaction problem),
-    while $E_{\mathrm{LdG}}$ connects to the Ginzburg&ndash;Landau energy functional
-    used in nematic liquid crystal theory and cross-field design for quad meshing
-    (Beaufort et al., 2017; Viertel &amp; Osting, 2019).
-    Conway &amp; Radin (1998) showed that quaquaversal tilings can achieve infinite rotational diversity
-    in 3D tessellations; our BFS greedy algorithm achieves an analogous property in 2D
-    by distributing angles as uniformly as possible (low $S$).
-  </p>
-  <p>
-    Exploring these connections more rigorously &mdash; for instance, proving bounds on
-    $E_{\mathrm{contrast}}$ for Poisson-Voronoi graphs, or relating the angle assignment problem
-    to known results in circular chromatic number theory &mdash;
-    is a promising direction for future theoretical work.
+    A formal connection to diffraction theory is an appealing direction.
+    One could compute the angular power spectrum
+    $\hat{R}(\omega) = \sum_k R_k e^{-i\omega k}$ and examine whether
+    Poisson + BFS configurations produce a flat spectrum (white noise in angle space,
+    analogous to amorphous order) or exhibit peaks at specific frequencies
+    (analogous to quasicrystalline order).
+    A purely 4-connected checkerboard&rsquo;s $R_k$ sequence ($-1, +1, -1, +1, \ldots$) would produce
+    a single sharp peak at $\omega = \pi$, the signature of 2-periodic crystalline structure;
+    the Delaunay diagonal edges in our implementation moderate this periodicity.
+    Proving bounds on $R_k$ for BFS greedy on Poisson-Voronoi graphs,
+    or relating the angle assignment problem to known results in circular chromatic number theory,
+    are promising theoretical directions.
   </p>
 
   <h3>8.5 $k$-Aware Quality Metrics</h3>
   <p>
-    As discussed in Section 7.6, the current metrics are $k$-invariant &mdash;
+    As discussed in Section 7.5, the current metrics are $k$-invariant &mdash;
     they depend only on the primary angle and cannot evaluate the visual contribution
     of secondary hatch layers.
     Future work should develop metrics that capture $k$-dependent properties,
@@ -907,18 +917,22 @@
   <p>
     This report presented the first mathematical formulation of kakeami quality
     and a controlled experiment evaluating tile placement and angle assignment strategies.
-    Six complementary metrics &mdash; four angular ($E_{\mathrm{contrast}}$, $E_{\mathrm{LdG}}$, $S$, $H_{\mathrm{angle}}$)
-    and two spatial ($C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$) &mdash;
-    were proposed to capture the key perceptual properties of kakeami patterns.
+    We identified five properties of good kakeami and proposed six complementary metrics to measure them:
+    two angular ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$),
+    two aperiodicity ($R_2$, $R_3$),
+    and two spatial ($C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
+    The central insight is that good kakeami exhibits <em>quasicrystalline order</em> &mdash;
+    strong short-range angular contrast with rapidly decaying correlation at longer ranges.
+    The $R_k$ autocorrelation metrics reveal the spatial structure of angle correlations
+    beyond immediate neighbours, and $H_{\mathrm{angle}}$ robustly separates
+    the angle-limited checkerboard from the diverse BFS conditions.
     The 2&times;2 factorial experiment with 100 seeds demonstrated that
     angle assignment is the dominant factor ($\eta^2 \approx 0.94$),
     while Poisson-disk placement provides superior spatial uniformity.
     The proposed Poisson-disk + BFS greedy combination achieves the best overall quality.
-    The grid-checkerboard reference condition exposed a metric vulnerability
-    that motivated the introduction of angle entropy $H_{\mathrm{angle}}$,
-    completing the six-metric evaluation framework.
     Future work includes tonal gradation via spatially varying $k$,
     generalisation to arbitrary tile shapes and fill patterns,
+    connections to quasicrystalline diffraction theory,
     and development of $k$-aware quality metrics.
   </p>
 
@@ -940,6 +954,7 @@
     <li>Toudo, R. (2003). <em>マンガの基礎デッサン</em> [Manga Basic Drawing]. Hobby Japan.</li>
     <li>Japanese with Anime. (2020). Kakeami. <a href="https://www.japanesewithanime.com/2020/03/kakeami.html">www.japanesewithanime.com/2020/03/kakeami.html</a>.</li>
     <li>Emiya Manga Class. (2018). カケアミの描き方. <a href="http://lanmy.net/2018/05/manga-kakeami/">lanmy.net/2018/05/manga-kakeami/</a>.</li>
+    <li>Shechtman, D., Blech, I., Gratias, D., &amp; Cahn, J. W. (1984). Metallic phase with long-range orientational order and no translational symmetry. <em>Physical Review Letters</em>, 53(20), 1951&ndash;1953.</li>
   </ol>
 
   <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--color-border); font-size: 0.8rem; color: #999; text-align: center;">
