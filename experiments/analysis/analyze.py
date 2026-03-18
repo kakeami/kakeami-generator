@@ -277,7 +277,7 @@ def compute_effect_sizes(df: pd.DataFrame) -> dict:
                     ((n1 - 1) * x1.std(ddof=1) ** 2 + (n2 - 1) * x2.std(ddof=1) ** 2)
                     / (n1 + n2 - 2)
                 )
-                d = (x1.mean() - x2.mean()) / pooled_sd if pooled_sd > 0 else 0.0
+                d = (x1.mean() - x2.mean()) / pooled_sd if pooled_sd > 0 else float("inf")
                 pairs.append({
                     "pair": f"{CONDITION_LABELS[c1]} vs {CONDITION_LABELS[c2]}",
                     "cohen_d": d,
@@ -581,7 +581,7 @@ def plot_r1_xi_scatter(df: pd.DataFrame) -> None:
 
     ax.set_xlabel(r"Correlation length $\xi$", fontsize=11)
     ax.set_ylabel(r"$|R_1|$", fontsize=11)
-    ax.set_title(r"$|R_1|$ vs $\xi$: Order Classification", fontsize=13)
+    ax.set_title(r"$|R_1|$ vs $\xi$", fontsize=13)
     ax.set_ylim(0, 1.05)
     ax.legend(fontsize=9)
     ax.grid(alpha=0.3)
@@ -589,11 +589,11 @@ def plot_r1_xi_scatter(df: pd.DataFrame) -> None:
     # Annotate regions
     xlim = ax.get_xlim()
     ax.text(xlim[1] * 0.05, 0.95, "Amorphous\n(low $|R_1|$, low $\\xi$)",
-            fontsize=8, color="#666", ha="left", va="top")
-    ax.text(xlim[1] * 0.5, 0.95, "Quasicrystalline\n(high $|R_1|$, low $\\xi$)",
-            fontsize=8, color="#666", ha="center", va="top")
-    ax.text(xlim[1] * 0.9, 0.95, "Crystalline\n(high $|R_1|$, high $\\xi$)",
-            fontsize=8, color="#666", ha="right", va="top")
+            fontsize=8, color="#999", fontstyle="italic", ha="left", va="top")
+    ax.text(xlim[1] * 0.5, 0.95, "Frustrated\nshort-range order",
+            fontsize=8, color="#999", fontstyle="italic", ha="center", va="top")
+    ax.text(xlim[1] * 0.9, 0.95, "Periodic\n(high $|R_1|$, high $\\xi$)",
+            fontsize=8, color="#999", fontstyle="italic", ha="right", va="top")
 
     plt.tight_layout()
     fig.savefig(ASSETS_DIR / "scatter_r1_xi.png", dpi=150, bbox_inches="tight")
