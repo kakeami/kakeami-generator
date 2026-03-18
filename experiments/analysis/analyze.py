@@ -80,17 +80,17 @@ def _exp_decay(k, A, xi):
     return A * np.exp(-k / xi)
 
 
-def compute_xi(profile: list[dict]) -> float:
-    """Fit |R_k| ~ A * exp(-k/ξ) via curve_fit. Return ξ (or np.inf if non-converging)."""
+def compute_xi(profile: list[dict]) -> tuple[float, float]:
+    """Fit |R_k| ~ A * exp(-k/ξ) via curve_fit. Return (ξ, R²)."""
     if not profile or len(profile) < 2:
-        return np.nan
+        return (np.nan, np.nan)
     ks = np.array([e["k"] for e in profile], dtype=float)
     abs_rk = np.array([abs(e["rk"]) for e in profile], dtype=float)
     weights = np.array([e["nPairs"] for e in profile], dtype=float)
 
     # All near-zero → no correlation to fit
     if np.max(abs_rk) < 0.01:
-        return 0.0
+        return (0.0, np.nan)
 
     try:
         popt, _ = curve_fit(
@@ -100,9 +100,15 @@ def compute_xi(profile: list[dict]) -> float:
             bounds=([0, 0.01], [2.0, 100.0]),
             maxfev=5000,
         )
-        return float(popt[1])
+        xi = float(popt[1])
+        # Compute R²
+        predicted = _exp_decay(ks, *popt)
+        ss_res = np.sum((abs_rk - predicted) ** 2)
+        ss_tot = np.sum((abs_rk - np.mean(abs_rk)) ** 2)
+        r_squared = 1.0 - ss_res / ss_tot if ss_tot > 0 else np.nan
+        return (xi, float(r_squared))
     except (RuntimeError, ValueError):
-        return np.inf
+        return (np.inf, np.nan)
 
 
 def load_data() -> pd.DataFrame:
@@ -121,11 +127,14 @@ def load_data() -> pd.DataFrame:
 
     if "rAutoProfile" in df.columns:
         df["rAuto1"] = df["rAutoProfile"].apply(_extract_r1)
-        df["xi"] = df["rAutoProfile"].apply(compute_xi)
+        xi_results = df["rAutoProfile"].apply(compute_xi)
+        df["xi"] = xi_results.apply(lambda x: x[0])
+        df["xi_r2"] = xi_results.apply(lambda x: x[1])
     else:
         # Backward compat: no profile data
         df["rAuto1"] = 0.0
         df["xi"] = np.nan
+        df["xi_r2"] = np.nan
 
     return df
 
@@ -233,7 +242,11 @@ def summary_table(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def two_way_anova(df: pd.DataFrame) -> dict:
-    """Two-way ANOVA: placement × angle for each metric (original 4 conditions only)."""
+    """Two-way ANOVA: placement × angle for each metric (original 4 conditions only).
+
+    Returns {metric: {"table": DataFrame, "shapiro_stat", "shapiro_p",
+                       "levene_stat", "levene_p", "n_excluded"}}.
+    """
     # Filter to the 4 conditions that belong to the 2×2 factorial design
     df = df[df["condition"].isin(ANOVA_CONDITIONS)].copy()
     df["placement"] = df["condition"].map(
@@ -246,9 +259,11 @@ def two_way_anova(df: pd.DataFrame) -> dict:
     results = {}
     for metric in METRICS:
         df_m = df.copy()
+        n_before = len(df_m)
         # Skip metrics with non-finite values (e.g. xi with inf)
         if not np.all(np.isfinite(df_m[metric])):
             df_m = df_m[np.isfinite(df_m[metric])]
+        n_excluded = n_before - len(df_m)
         if len(df_m) < 10:
             continue
         model = ols(f"{metric} ~ C(placement) * C(angle)", data=df_m).fit()
@@ -256,18 +271,59 @@ def two_way_anova(df: pd.DataFrame) -> dict:
         # Compute η² = SS_effect / SS_total
         ss_total = table["sum_sq"].sum()
         table["eta_sq"] = table["sum_sq"] / ss_total
-        results[metric] = table
+
+        # Compute ω² = (SS_effect - df_effect * MS_error) / (SS_total + MS_error)
+        ss_resid = table.loc["Residual", "sum_sq"]
+        df_resid = table.loc["Residual", "df"]
+        ms_error = ss_resid / df_resid if df_resid > 0 else 0
+        omega_sq_vals = []
+        for source in table.index:
+            if source == "Residual":
+                omega_sq_vals.append(np.nan)
+            else:
+                ss_eff = table.loc[source, "sum_sq"]
+                df_eff = table.loc[source, "df"]
+                omega = (ss_eff - df_eff * ms_error) / (ss_total + ms_error)
+                omega_sq_vals.append(max(omega, 0))  # floor at 0
+        table["omega_sq"] = omega_sq_vals
+
+        # Shapiro-Wilk test on residuals (normality)
+        resid = model.resid
+        if len(resid) >= 3:
+            shapiro_stat, shapiro_p = stats.shapiro(resid)
+        else:
+            shapiro_stat, shapiro_p = np.nan, np.nan
+
+        # Levene's test across conditions (homoscedasticity)
+        groups = [
+            df_m[df_m["condition"] == c][metric].values
+            for c in ANOVA_CONDITIONS
+            if c in df_m["condition"].values
+        ]
+        if len(groups) >= 2 and all(len(g) >= 2 for g in groups):
+            levene_stat, levene_p = stats.levene(*groups)
+        else:
+            levene_stat, levene_p = np.nan, np.nan
+
+        results[metric] = {
+            "table": table,
+            "shapiro_stat": float(shapiro_stat),
+            "shapiro_p": float(shapiro_p),
+            "levene_stat": float(levene_stat),
+            "levene_p": float(levene_p),
+            "n_excluded": n_excluded,
+        }
     return results
 
 
 def compute_effect_sizes(df: pd.DataFrame) -> dict:
-    """Pairwise Cohen's d (pooled SD) for all 10 condition pairs per metric."""
+    """Pairwise Cohen's d (pooled SD) for the 4 factorial conditions (6 pairs) per metric."""
     results = {}
     for metric in METRICS:
         pairs = []
-        for i in range(len(CONDITIONS)):
-            for j in range(i + 1, len(CONDITIONS)):
-                c1, c2 = CONDITIONS[i], CONDITIONS[j]
+        for i in range(len(ANOVA_CONDITIONS)):
+            for j in range(i + 1, len(ANOVA_CONDITIONS)):
+                c1, c2 = ANOVA_CONDITIONS[i], ANOVA_CONDITIONS[j]
                 x1 = df[df["condition"] == c1][metric].values.astype(float)
                 x2 = df[df["condition"] == c2][metric].values.astype(float)
                 x1 = x1[np.isfinite(x1)]
@@ -287,10 +343,11 @@ def compute_effect_sizes(df: pd.DataFrame) -> dict:
 
 
 def pairwise_tests(df: pd.DataFrame) -> dict:
-    """Tukey HSD post-hoc for each metric."""
+    """Tukey HSD post-hoc for each metric (4 factorial conditions only)."""
     results = {}
     for metric in METRICS:
         df_m = df[np.isfinite(df[metric])].copy()
+        df_m = df_m[df_m["condition"].isin(ANOVA_CONDITIONS)]
         if len(df_m) < 10:
             continue
         tukey = pairwise_tukeyhsd(
@@ -298,7 +355,23 @@ def pairwise_tests(df: pd.DataFrame) -> dict:
             df_m["condition"].map(CONDITION_LABELS),
             alpha=0.05,
         )
-        results[metric] = str(tukey)
+        # Extract structured data for template rendering
+        rows = []
+        groups = list(tukey.groupsunique)
+        idx = 0
+        for i in range(len(groups)):
+            for j in range(i + 1, len(groups)):
+                rows.append({
+                    "group1": str(groups[i]),
+                    "group2": str(groups[j]),
+                    "meandiff": f"{tukey.meandiffs[idx]:.4f}",
+                    "p_adj": f"{tukey.pvalues[idx]:.4f}",
+                    "lower": f"{tukey.confint[idx][0]:.4f}",
+                    "upper": f"{tukey.confint[idx][1]:.4f}",
+                    "reject": "Yes" if tukey.reject[idx] else "No",
+                })
+                idx += 1
+        results[metric] = rows
     return results
 
 
@@ -533,7 +606,11 @@ def plot_correlogram(df: pd.DataFrame) -> None:
 
         ks = sorted(k_vals.keys())
         means = [np.mean(k_vals[k]) for k in ks]
-        ci95 = [1.96 * np.std(k_vals[k]) / np.sqrt(len(k_vals[k])) for k in ks]
+        ci95 = [
+            stats.t.ppf(0.975, len(k_vals[k]) - 1) * np.std(k_vals[k], ddof=1) / np.sqrt(len(k_vals[k]))
+            if len(k_vals[k]) > 1 else 0.0
+            for k in ks
+        ]
 
         ax.plot(ks, means, "o-", color=colors[cond], label=CONDITION_LABELS[cond],
                 markersize=4, linewidth=1.5)
@@ -617,12 +694,16 @@ def render_report(
     )
     template = env.get_template("template.html")
 
-    # Format ANOVA tables for template
+    # Format ANOVA tables for template (new dict structure from two_way_anova)
     anova_data = {}
-    for metric, table in anova_results.items():
+    assumption_data = {}
+    anova_exclusions = {}
+    for metric, result in anova_results.items():
+        table = result["table"]
         rows = []
         for source in table.index:
             row = table.loc[source]
+            omega_sq_val = row["omega_sq"]
             rows.append({
                 "source": source.replace("C(placement)", "Placement")
                                .replace("C(angle)", "Angle")
@@ -632,15 +713,45 @@ def render_report(
                 "f": f"{row['F']:.2f}" if not np.isnan(row['F']) else "—",
                 "p": f"{row['PR(>F)']:.4f}" if not np.isnan(row['PR(>F)']) else "—",
                 "eta_sq": f"{row['eta_sq']:.4f}",
+                "omega_sq": f"{omega_sq_val:.4f}" if not np.isnan(omega_sq_val) else "—",
             })
-        anova_data[METRIC_LABELS_PLAIN[metric]] = rows
+        plain = METRIC_LABELS_PLAIN[metric]
+        anova_data[plain] = rows
+        assumption_data[plain] = {
+            "shapiro_stat": f"{result['shapiro_stat']:.4f}" if np.isfinite(result['shapiro_stat']) else "—",
+            "shapiro_p": f"{result['shapiro_p']:.4f}" if np.isfinite(result['shapiro_p']) else "—",
+            "levene_stat": f"{result['levene_stat']:.4f}" if np.isfinite(result['levene_stat']) else "—",
+            "levene_p": f"{result['levene_p']:.4f}" if np.isfinite(result['levene_p']) else "—",
+        }
+        anova_exclusions[plain] = result["n_excluded"]
 
-    # Format effect size tables for template
+    # Format effect size tables for template (Fix 7: handle inf/nan)
     effect_data = {}
     for metric, pairs in effect_sizes.items():
         effect_data[METRIC_LABELS_PLAIN[metric]] = [
-            {"pair": p["pair"], "d": f"{p['cohen_d']:.3f}"} for p in pairs
+            {
+                "pair": p["pair"],
+                "d": f"{p['cohen_d']:.3f}" if np.isfinite(p["cohen_d"]) else "—",
+            }
+            for p in pairs
         ]
+
+    # Format Tukey HSD tables for template
+    tukey_data = {}
+    for metric, rows in tukey_results.items():
+        tukey_data[METRIC_LABELS_PLAIN[metric]] = rows
+
+    # Compute per-condition mean R² for ξ fit (Fix 4)
+    xi_r2_data = {}
+    if "xi_r2" in df.columns:
+        for cond in CONDITIONS:
+            sub = df[df["condition"] == cond]
+            r2_vals = sub["xi_r2"].values.astype(float)
+            finite = r2_vals[np.isfinite(r2_vals)]
+            if len(finite) > 0:
+                xi_r2_data[CONDITION_LABELS[cond]] = f"{np.mean(finite):.3f}"
+            else:
+                xi_r2_data[CONDITION_LABELS[cond]] = "—"
 
     has_correlogram = (ASSETS_DIR / "correlogram.png").exists()
     has_scatter = (ASSETS_DIR / "scatter_r1_xi.png").exists()
@@ -654,10 +765,14 @@ def render_report(
         second_best_cells=second_best_cells,
         metric_labels_plain=METRIC_LABELS_PLAIN,
         anova_data=anova_data,
+        assumption_data=assumption_data,
+        anova_exclusions=anova_exclusions,
         effect_data=effect_data,
+        xi_r2_data=xi_r2_data,
         n_seeds=len(df["seed"].unique()),
         has_correlogram=has_correlogram,
         has_scatter=has_scatter,
+        tukey_data=tukey_data,
     )
 
     output_path = OUTPUT_DIR / "index.html"
@@ -684,9 +799,13 @@ def main() -> None:
 
     print("Running two-way ANOVA...")
     anova_results = two_way_anova(df)
-    for metric, table in anova_results.items():
+    for metric, result in anova_results.items():
         print(f"  {metric}:")
-        print(table.to_string())
+        print(result["table"].to_string())
+        print(f"    Shapiro-Wilk: W={result['shapiro_stat']:.4f}, p={result['shapiro_p']:.4f}")
+        print(f"    Levene: F={result['levene_stat']:.4f}, p={result['levene_p']:.4f}")
+        if result["n_excluded"] > 0:
+            print(f"    ({result['n_excluded']} rows excluded due to non-finite values)")
 
     print("Computing effect sizes...")
     effect_sizes = compute_effect_sizes(df)

@@ -24,16 +24,15 @@
      4.4 Experimental Conditions (2x2 + checkerboard)
   5. Experimental Setup
   6. Results
-     6.1 Quality Metrics (box plots, correlogram)
-     6.2 Summary Table
-     6.3 Statistical Analysis (ANOVA, effect sizes)
+     6.1 Representative Images
+     6.2 Quality Metrics (box plots, correlogram)
+     6.3 Summary Table
      6.4 |R_1| vs ξ Scatter
-     6.5 Representative Images
   7. Discussion
      7.1 Effect of Angle Assignment
      7.2 Effect of Tile Placement
-     7.3 Checkerboard as Crystalline Order
-     7.4 Correlation Length Analysis and Frustrated Short-Range Order
+     7.3 The Gap Between Metrics and Subjective Quality
+     7.4 Correlation Structure
      7.5 k-Invariance of Quality Metrics
      7.6 Limitations
   8. Future Work
@@ -46,6 +45,9 @@
      8.5 k-Aware Quality Metrics
   9. Conclusion
   10. References
+  Appendix A. Two-Way ANOVA Tables
+  Appendix B. Pairwise Effect Sizes (Cohen's d)
+  Appendix C. Tukey HSD Post-Hoc Comparisons
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -135,6 +137,11 @@
     .back-link { display: inline-block; margin-bottom: 1rem; font-size: 0.9rem; color: var(--color-accent); text-decoration: none; }
     .back-link:hover { text-decoration: underline; }
 
+    /* Appendix */
+    .appendix h2 { color: #555; }
+    .appendix details { margin: 0.5rem 0; }
+    .appendix summary { cursor: pointer; font-weight: bold; font-size: 0.95rem; margin-bottom: 0.3rem; }
+
     /* Responsive */
     @media (max-width: 600px) {
       .image-grid { grid-template-columns: repeat(3, 1fr); }
@@ -160,37 +167,34 @@
   <p>
     Kakeami is a traditional manga shading technique in which small rectangular tiles are filled
     with parallel hatching lines at varying angles to create tonal gradation.
-    Despite its importance in manga production, no formal framework exists
-    for defining kakeami quality or evaluating automatic generation algorithms.
-    This report presents the first mathematical formulation of kakeami quality,
-    proposing eight complementary metrics &mdash;
+    We propose an automatic generation algorithm combining Poisson-disk tile placement,
+    Voronoi adjacency construction, and BFS greedy angle assignment,
+    which produces the most natural-looking kakeami among all tested conditions by visual inspection.
+    To evaluate this claim quantitatively, we introduce eight complementary quality metrics &mdash;
     angle contrast ($E_{\mathrm{contrast}}$), angle entropy ($H_{\mathrm{angle}}$),
     angle autocorrelation at graph distances 1&ndash;3 ($R_1$, $R_2$, $R_3$),
     correlation length ($\xi$),
     coverage ratio ($C_{\mathrm{cov}}$), and Voronoi cell area CV ($U_{\mathrm{vor}}$) &mdash;
-    drawing on concepts from spatial statistics and orientational order in condensed matter physics.
-    We argue that good kakeami exhibits <em>frustrated short-range order</em>:
-    short-range angular contrast (high $E_{\mathrm{contrast}}$) without long-range periodic repetition ($R_k \approx 0$).
-    We conduct a controlled 2&times;2 factorial experiment (tile placement &times; angle assignment)
-    with 100 random seeds, supplemented by a deterministic grid-checkerboard reference condition.
-    Two-way ANOVA reveals that angle assignment is the dominant factor
-    ($\eta^2 \approx 0.94$ for $E_{\mathrm{contrast}}$, $\eta^2 \approx 0.89$ for $R_2$),
-    and the proposed Poisson-disk + BFS greedy combination achieves the best balance
-    of local contrast, angular diversity, spatial coverage, and aperiodicity
-    among the stochastic conditions.
-    No single condition dominates all metrics.
-    The $R_k$ autocorrelation metrics reveal the structure of angle correlations beyond immediate neighbours:
-    random conditions show $R_2 \approx 0$ (no correlation),
-    while BFS greedy introduces a mild positive $R_2$ as a side effect of local contrast maximisation.
-    The checkerboard&rsquo;s low angle diversity ($H_{\mathrm{angle}} \approx 0.28$ vs. $\geq 0.95$ for BFS)
-    remains the clearest discriminator of its mechanical character.
+    and conduct a controlled 2&times;2 factorial experiment with {{ n_seeds }} random seeds,
+    supplemented by a deterministic grid-checkerboard reference condition.
+  </p>
+  <p>
+    The proposed condition does not rank first on any of the eight metrics.
+    The checkerboard achieves the highest $E_{\mathrm{contrast}}$ despite looking mechanical;
+    random-angle conditions achieve the highest $H_{\mathrm{angle}}$ while lacking consistent local contrast.
+    Two-way ANOVA confirms that angle assignment is the dominant factor
+    ($\eta^2 \approx 0.94$ for $E_{\mathrm{contrast}}$)
+    and the metrics are useful for component-level ablation,
+    but they fail to capture the holistic visual quality &mdash; the &ldquo;grain&rdquo; &mdash;
+    that distinguishes natural-looking kakeami from mechanical or random patterns.
+    Defining a metric that aligns with subjective kakeami quality remains an open problem.
   </p>
 
   <!-- 1. Introduction -->
   <h2>1. Introduction</h2>
 
   <p>
-    <strong>Kakeami</strong> (カケアミ) is a shading technique in Japanese manga.
+    <strong>Kakeami</strong> (&#x30AB;&#x30B1;&#x30A2;&#x30DF;) is a shading technique in Japanese manga.
     Small blocks are filled with parallel hatching lines,
     and adjacent blocks use different angles to create tonal gradation
     (Pixiv Encyclopedia; Toudo, 2003).
@@ -220,14 +224,21 @@
     and <strong>angle assignment</strong> (BFS greedy vs. random).
   </p>
   <p>
+    A central finding of this work is that while the proposed Poisson-disk + BFS greedy algorithm
+    produces subjectively superior kakeami &mdash; with angular contrast visible everywhere
+    and a natural &ldquo;grain&rdquo; that avoids mechanical repetition &mdash;
+    none of the eight proposed metrics ranks it first.
+    This reveals a fundamental gap between formal quality measures and human visual judgement.
+  </p>
+  <p>
     The remainder of the report is organised as follows.
     Section 2 reviews related work in NPR hatching and manga generation to identify the gap this work addresses.
     Section 3 introduces a novel mathematical formulation for kakeami quality,
     drawing on concepts from spatial statistics, direction field theory, and condensed matter physics.
     Section 4 describes the proposed algorithm and the baseline conditions.
-    Section 5 details the experimental setup, Section 6 presents the quantitative results
-    including two-way ANOVA and effect size analysis,
-    Section 7 discusses their implications, Section 8 outlines directions for future work,
+    Section 5 details the experimental setup, Section 6 presents the quantitative results,
+    Section 7 discusses their implications &mdash; including the gap between metrics and subjective quality &mdash;
+    Section 8 outlines directions for future work,
     and Section 9 concludes.
   </p>
 
@@ -396,13 +407,13 @@
   <p>
     <strong>Caveats.</strong>
     The exponential decay model is a working hypothesis;
-    goodness-of-fit ($R^2$, residual analysis) has not been formally assessed,
-    and alternative models (e.g. power-law decay $|R_k| \sim k^{-\alpha}$) have not been compared.
+    goodness-of-fit is assessed via $R^2$ (see Appendix A),
+    but alternative models (e.g. power-law decay $|R_k| \sim k^{-\alpha}$) have not been compared.
     For the checkerboard condition, $|R_k|$ oscillates rather than decays,
     so the fit does not converge and $\xi = \infty$ is a sentinel value indicating model failure,
     not a physically meaningful infinite correlation length.
-    Similarly, $\xi = 0$ for random conditions reflects the absence of any correlation to fit,
-    rather than a meaningful zero-length correlation.
+    For random conditions, the near-zero $|R_k|$ profile lacks any decay to fit,
+    producing large $\xi$ values that indicate model inapplicability, not long-range correlation.
     These boundary cases should be interpreted as &ldquo;outside the model&rsquo;s domain&rdquo;
     rather than as quantitative measurements.
   </p>
@@ -561,19 +572,40 @@
   <!-- 6. Results -->
   <h2>6. Results</h2>
   <p>
-    We present the experimental results using the eight quality metrics defined in Section 3
-    ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_1$, $R_2$, $R_3$, $\xi$, $C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
+    We present the experimental results using the eight quality metrics defined in Section 3.
     All metrics are computed at $k = 1$.
-    Section 6.1 shows box plots, Section 6.2 provides summary statistics,
-    Section 6.3 presents the statistical analysis (two-way ANOVA and effect sizes),
-    and Section 6.4 shows representative images across $k$ values.
+    Section 6.1 shows representative images,
+    Section 6.2 presents box plots and the correlogram,
+    Section 6.3 provides summary statistics,
+    and Section 6.4 shows the $|R_1|$ vs $\xi$ scatter.
+    Full statistical analysis (two-way ANOVA, pairwise effect sizes, and post-hoc tests)
+    is provided in the Appendices.
   </p>
 
-  <h3>6.1 Quality Metrics</h3>
+  <h3>6.1 Representative Images</h3>
+  <p>
+    For each condition, the seed whose $E_{\mathrm{contrast}}$ ($k = 1$) is closest to the median is shown.
+    Images are rendered at $k = 1, 2, 3, 4$ to illustrate the visual effect of layering.
+    Note that $k$ does not affect the quality metrics, which depend only on the primary angle $\phi_i$.
+  </p>
+
+  {% for k in k_values %}
+  <h4>$k = {{ k }}$</h4>
+  <div class="image-grid">
+    {% for cond in conditions %}
+    <div>
+      <img src="images/{{ cond }}_k{{ k }}.png" alt="{{ condition_labels[cond] }}, k={{ k }}" />
+      <div class="label">{{ condition_labels[cond] }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  <h3>6.2 Quality Metrics</h3>
   <p>
     <em>Note:</em> The Grid + Checkerboard condition is a deterministic reference configuration
     that produces identical results across all seeds (zero variance in the box plots).
-    Its role as a metric-vulnerability demonstration is discussed in Section 7.3.
+    Its role is discussed in Section 7.4.
   </p>
 
   {% for metric in ['eContrast', 'hAngle', 'rAuto1', 'rAuto2', 'rAuto3', 'cCov', 'uVor', 'xi'] %}
@@ -601,7 +633,7 @@
   </figure>
   {% endif %}
 
-  <h3>6.2 Summary Table</h3>
+  <h3>6.3 Summary Table</h3>
   <p>
     Cells with a <span style="background: var(--color-best); padding: 0.1em 0.3em;">dark green background</span>
     indicate the best-performing condition for that metric;
@@ -645,62 +677,8 @@
   </table>
   <p style="font-size: 0.85rem; color: #555;">
     * Grid + Checkerboard is a deterministic reference condition outside the 2&times;2 factorial design.
-    Its role is discussed in Section 7.3.
+    Its role is discussed in Section 7.4.
   </p>
-
-  <h3>6.3 Statistical Analysis</h3>
-  <p>
-    To rigorously assess the effects of tile placement and angle assignment,
-    we perform a two-way ANOVA (Type II) with placement and angle as fixed factors.
-    The ANOVA uses only the original four 2&times;2 factorial conditions
-    (gridCheckerboard is excluded as it does not belong to the factorial design).
-    We report $F$-statistics, $p$-values, and effect sizes ($\eta^2 = SS_{\mathrm{effect}} / SS_{\mathrm{total}}$).
-    Note that $\eta^2$ has a known upward bias; partial $\eta^2$ or $\omega^2$ would be more conservative
-    estimates, and ANOVA assumptions (normality, homoscedasticity) have not been formally tested
-    (see Limitations, Section 7.6).
-    Pairwise comparisons (Tukey HSD at $\alpha = 0.05$ and Cohen's $d$)
-    are computed across all five conditions (10 pairs).
-    No correction for multiple testing across metrics is applied.
-  </p>
-
-  {% for metric_plain, rows in anova_data.items() %}
-  <h4>ANOVA: ${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('H_angle', 'H_{\\mathrm{angle}}').replace('C_cov', 'C_{\\mathrm{cov}}').replace('U_vor', 'U_{\\mathrm{vor}}').replace('R_1', 'R_1').replace('R_2', 'R_2').replace('R_3', 'R_3').replace('xi', '\\xi') }}$</h4>
-  <table>
-    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
-    {% for row in rows %}
-    <tr>
-      <td>{{ row.source }}</td>
-      <td>{{ row.ss }}</td>
-      <td>{{ row.df }}</td>
-      <td>{{ row.f }}</td>
-      <td>{{ row.p }}</td>
-      <td>{{ row.eta_sq }}</td>
-    </tr>
-    {% endfor %}
-  </table>
-  {% endfor %}
-
-  <h4>Pairwise Effect Sizes (Cohen's $d$)</h4>
-  <p>
-    Positive $d$ indicates the first condition scores higher than the second.
-    By convention: $|d| < 0.2$ negligible, $0.2$&ndash;$0.5$ small, $0.5$&ndash;$0.8$ medium, $> 0.8$ large.
-  </p>
-  <p>
-    <em>Note:</em> The Grid + Checkerboard condition is deterministic (zero variance across seeds).
-    Pairwise Cohen's $d$ involving this condition uses only the other condition's standard deviation
-    as the pooled SD, which may overstate the effect size.
-    These values should be interpreted with caution.
-  </p>
-
-  {% for metric_plain, pairs in effect_data.items() %}
-  <h4>${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('H_angle', 'H_{\\mathrm{angle}}').replace('C_cov', 'C_{\\mathrm{cov}}').replace('U_vor', 'U_{\\mathrm{vor}}').replace('R_2', 'R_2').replace('R_3', 'R_3') }}$</h4>
-  <table>
-    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
-    {% for pair in pairs %}
-    <tr><td>{{ pair.pair }}</td><td>{{ pair.d }}</td></tr>
-    {% endfor %}
-  </table>
-  {% endfor %}
 
   {% if has_scatter %}
   <h3>6.4 $|R_1|$ vs $\xi$ Scatter</h3>
@@ -715,49 +693,30 @@
   <figure>
     <img src="assets/scatter_r1_xi.png" alt="|R_1| vs ξ scatter plot" />
     <figcaption>Figure 11: Per-run scatter of $|R_1|$ vs $\xi$.
-    Note that region labels (Amorphous, Quasicrystalline, Crystalline) are descriptive annotations,
+    Note that region labels are descriptive annotations,
     not quantitatively defined classification boundaries.</figcaption>
   </figure>
   {% endif %}
-
-  <h3>6.5 Representative Images</h3>
-  <p>
-    For each condition, the seed whose $E_{\mathrm{contrast}}$ ($k = 1$) is closest to the median is shown.
-    Images are rendered at $k = 1, 2, 3, 4$ to illustrate the visual effect of layering.
-    Note that $k$ does not affect the quality metrics, which depend only on the primary angle $\phi_i$.
-  </p>
-
-  {% for k in k_values %}
-  <h4>$k = {{ k }}$</h4>
-  <div class="image-grid">
-    {% for cond in conditions %}
-    <div>
-      <img src="images/{{ cond }}_k{{ k }}.png" alt="{{ condition_labels[cond] }}, k={{ k }}" />
-      <div class="label">{{ condition_labels[cond] }}</div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endfor %}
 
   <!-- 7. Discussion -->
   <h2>7. Discussion</h2>
   <p>
     The results in Section 6 reveal clear performance differences among the five conditions.
     Sections 7.1&ndash;7.2 analyse the two factors of the 2&times;2 factorial design,
-    Section 7.3 reinterprets the checkerboard condition through the lens of periodic vs. aperiodic order,
-    Section 7.4 discusses what the $R_k$ autocorrelation metrics and correlation length reveal about aperiodicity,
+    Section 7.3 addresses the central finding &mdash; the gap between metric rankings and subjective quality &mdash;
+    Section 7.4 discusses the correlation structure revealed by the $R_k$ metrics,
     Section 7.5 discusses $k$-invariance of the metric framework,
     and Section 7.6 identifies limitations.
   </p>
 
   <h3>7.1 Effect of Angle Assignment</h3>
   <p>
-    The two-way ANOVA confirms that the angle assignment strategy is the dominant factor.
-    For $E_{\mathrm{contrast}}$, the angle factor shows a large effect size ($\eta^2$),
-    indicating that BFS greedy assignment accounts for the majority of variance in angle contrast.
+    The two-way ANOVA (Appendix A) confirms that the angle assignment strategy is the dominant factor.
+    For $E_{\mathrm{contrast}}$, the angle factor shows $\eta^2 \approx 0.94$,
+    indicating that BFS greedy assignment accounts for the vast majority of variance in angle contrast.
     The BFS greedy strategy consistently outperforms random angle assignment on $E_{\mathrm{contrast}}$,
     confirming that local contrast maximisation via the adjacency graph
-    is the primary driver of visual quality.
+    is the primary driver of angular quality.
   </p>
 
   <h3>7.2 Effect of Tile Placement</h3>
@@ -765,129 +724,117 @@
     While the angular metrics ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$)
     show little sensitivity to placement strategy,
     the spatial metrics reveal a stark difference.
-    Poisson-disk placement achieves near-perfect coverage ($C_{\mathrm{cov}} \approx 1$)
+    Poisson-disk placement achieves near-perfect coverage ($C_{\mathrm{cov}} \approx 0.95$)
     thanks to the 1.4&times; tile expansion and minimum-distance guarantee,
-    whereas uniform random placement leaves visible gaps ($C_{\mathrm{cov}} < 1$)
+    whereas uniform random placement leaves visible gaps ($C_{\mathrm{cov}} \approx 0.75$)
     due to tile clustering.
     The Voronoi cell area CV ($U_{\mathrm{vor}}$) confirms this:
     Poisson-disk conditions show significantly lower CV (more uniform spacing)
     than random conditions, which approach the theoretical Poisson process value of $\approx 0.53$.
-    These spatial metrics capture a critical quality dimension &mdash; visual completeness &mdash;
-    that the angular metrics alone cannot detect.
   </p>
 
-  <h3>7.3 Checkerboard as Crystalline Order</h3>
+  <h3>7.3 The Gap Between Metrics and Subjective Quality</h3>
   <p>
-    The Grid + Checkerboard condition can be understood through the analogy
-    of periodic vs. aperiodic order from condensed matter physics.
-    By placing tiles on a regular grid and alternating between just two angles (0&deg; and 90&deg;),
-    the checkerboard creates a <em>crystalline</em> pattern with competitive local contrast
-    but severely limited angle diversity ($H_{\mathrm{angle}} \approx 0.28$, using only 2 of 12 bins).
-    The Delaunay triangulation of the grid adds diagonal edges between same-angle tiles,
-    which moderates the checkerboard&rsquo;s $E_{\mathrm{contrast}}$ below the theoretical maximum
-    and produces a modest $R_2$ rather than the ideal $+1$ of a pure 4-connected grid.
+    A striking result of this experiment is that the proposed Poisson-disk + BFS greedy condition &mdash;
+    which produces the most natural-looking kakeami by visual inspection &mdash;
+    <strong>does not rank first on any of the eight proposed metrics</strong>.
+    $E_{\mathrm{contrast}}$ is highest for the checkerboard;
+    $H_{\mathrm{angle}}$ is highest for random-angle conditions;
+    $|R_k|$ closest to zero is achieved by random conditions (which have no angular structure at all);
+    and the spatial metrics ($C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$) are optimal for the deterministic grid.
   </p>
   <p>
-    The $R_k$ metrics reveal the structure of angle correlations in each condition.
-    BFS greedy conditions exhibit a mild positive $R_2 \approx 0.17$:
-    maximising local contrast at each BFS step introduces a small same-angle correlation at distance 2,
-    an expected side effect of greedy optimisation on finite-degree graphs.
-    Random-angle conditions show $R_2 \approx 0$ (no correlation at any distance), as expected.
-    The checkerboard&rsquo;s $R_2 \approx 0.24$ is the highest, consistent with its periodic structure,
-    though Delaunay diagonal edges dilute the purely 2-periodic signature.
+    The subjective quality of Poisson-disk + BFS greedy is characterised by two properties:
+    (1) angular contrast is visible <em>everywhere</em> in the pattern &mdash;
+    no local region shows adjacent tiles with similar angles fusing together;
+    and (2) the pattern has a visible <em>grain</em> &mdash;
+    the texture looks organic and varied, not mechanical.
+    We term this combination &ldquo;grain&rdquo;:
+    the per-tile angular variation is clearly perceptible across the entire field,
+    without any region appearing flat or repetitive.
   </p>
   <p>
-    The most robust discriminator of the checkerboard&rsquo;s mechanical character
-    remains $H_{\mathrm{angle}} \approx 0.28$ vs. $\geq 0.95$ for BFS conditions:
-    using only two angles produces a visually repetitive pattern
-    regardless of how well those angles contrast locally.
-    The gridCheckerboard condition uses 64 tiles (8&times;8 grid),
-    comparable to the ~69 tiles of Poisson-disk conditions,
-    enabling direct metric comparison.
+    The proposed metrics fail to capture this property because they are global averages.
+    $E_{\mathrm{contrast}}$ measures the mean pairwise contrast across all edges,
+    but does not penalise a pattern where high average contrast coexists with poor angle diversity
+    (as in the checkerboard, which uses only two angles).
+    $H_{\mathrm{angle}}$ measures angle diversity globally
+    but says nothing about whether diverse angles are arranged to contrast <em>locally</em>
+    (random conditions achieve high $H_{\mathrm{angle}}$ while lacking consistent local contrast).
+    The $R_k$ metrics detect periodicity and long-range correlation,
+    but $R_k \approx 0$ for random conditions simply reflects the absence of any structure,
+    not the presence of well-designed aperiodicity.
+  </p>
+  <p>
+    No simple weighted combination of the eight metrics resolves this issue:
+    any weighting that favours $E_{\mathrm{contrast}}$ elevates the checkerboard;
+    any weighting that favours $H_{\mathrm{angle}}$ elevates the random conditions.
+    The &ldquo;grain&rdquo; quality emerges from the <em>simultaneous</em> achievement of
+    high local contrast, high angle diversity, and spatial regularity &mdash;
+    a conjunction that no individual metric or linear combination captures.
+    Developing a metric that aligns with subjective kakeami quality remains an open problem.
   </p>
 
-  <h3>7.4 Correlation Length Analysis and Frustrated Short-Range Order</h3>
+  <h3>7.4 Correlation Structure</h3>
   <p>
-    <em>Terminology note.</em>
-    We borrow the term &ldquo;quasicrystalline&rdquo; loosely from condensed matter physics
-    to describe patterns with short-range angular order but no long-range periodicity.
-    This is an analogy, not a claim of structural equivalence with physical quasicrystals
-    (Shechtman et al., 1984), which exhibit strict long-range orientational order with forbidden symmetries.
-    The BFS greedy output more closely resembles a <em>frustrated short-range ordered</em> state.
-    Rigorous verification of the analogy would require spectral analysis (Section 8.4).
-  </p>
-  <p>
-    The full $R_k$ correlogram (Figure 10) reveals fundamentally different spatial structures
-    across conditions. The checkerboard&rsquo;s correlogram oscillates with period 2
-    ($R_k \approx (-1)^k$), never decaying &mdash; the hallmark of crystalline periodicity.
+    The $R_k$ correlogram (Figure 10) reveals three qualitatively distinct regimes.
+    The checkerboard oscillates with period 2 ($R_k \approx (-1)^k$), never decaying &mdash;
+    the hallmark of crystalline periodicity.
+    Its low angle diversity ($H_{\mathrm{angle}} \approx 0.28$, using only 2 of 12 angle bins)
+    remains the clearest discriminator of its mechanical character.
     Random conditions produce a flat correlogram near zero at all distances:
-    no angular structure at any scale. BFS greedy conditions show a qualitatively different pattern:
-    strong negative $R_1$ (high nearest-neighbour contrast) that decays rapidly,
-    with $R_2 \approx 0.17$ reflecting the structural side effect of greedy maximisation
-    (tiles at distance 2 are pushed in similar directions by their shared intermediate neighbour),
-    and near-zero correlations by $k = 3$&ndash;$4$.
+    no angular structure at any scale.
+    BFS greedy conditions show strong negative $R_1$ decaying rapidly to near-zero by $k = 3$&ndash;$4$,
+    with a mild positive $R_2 \approx 0.17$ reflecting the structural side effect of greedy maximisation
+    (tiles at distance 2 share an intermediate neighbour that constrains both their angles).
   </p>
   <p>
-    The correlation length $\xi$ quantifies this decay rate.
+    The correlation length $\xi$ quantifies this decay.
     BFS conditions achieve small $\xi$ values ($\approx 1$&ndash;$2$),
-    indicating that angular correlations are confined to the immediate neighbourhood.
-    The checkerboard produces $\xi = \infty$ because the exponential decay model fails
-    to fit the oscillatory $|R_k|$ profile (see caveats in Section 3.3).
-    Random conditions yield $\xi \approx 0$ because there is no correlation to fit.
-    In both cases, $\xi$ is a sentinel value indicating that the exponential model
-    does not apply, rather than a quantitative measurement.
+    indicating angular correlations confined to the immediate neighbourhood.
+    The checkerboard produces $\xi = \infty$ (the exponential decay model fails for oscillatory profiles),
+    and random conditions produce large $\xi$ values ($\approx 57$)
+    because the near-zero $|R_k|$ profile lacks any decay to fit &mdash;
+    a model artefact, not evidence of long-range correlation.
+    In both cases, $\xi$ is outside the model&rsquo;s domain rather than a quantitative measurement
+    (see Section 3.3).
   </p>
   <p>
-    This three-way separation &mdash; periodic (large $\xi$, oscillatory $R_k$),
-    frustrated short-range order (small $\xi$, decaying $R_k$ from strong $|R_1|$),
-    and amorphous (near-zero $R_k$ everywhere) &mdash;
-    is reminiscent of the classification of orientational order in condensed matter physics.
-    In liquid crystal theory, the correlation length characterises the spatial extent of
-    nematic ordering (de Gennes &amp; Prost, 1993);
-    in frustrated antiferromagnets, short correlation lengths arise from the impossibility
-    of simultaneously satisfying all pairwise constraints on a non-bipartite graph (Toulouse, 1977).
-    This analogy suggests that the BFS greedy algorithm produces a similar frustrated state:
-    each tile&rsquo;s angle is maximally different from its neighbours,
-    but this local repulsion cannot propagate coherently through the irregular Poisson-Voronoi topology.
-    However, BFS greedy is a sequential heuristic, not a ground-state search,
-    so the analogy to physical frustration remains informal.
-  </p>
-  <p>
-    The full correlogram and derived $\xi$ capture a genuinely independent property &mdash;
-    the spatial structure of angle correlations beyond immediate neighbours &mdash;
-    that $E_{\mathrm{contrast}}$ alone cannot detect.
-    The $|R_1|$ vs $\xi$ scatter plot (Figure 11) visualises this two-dimensional space,
-    with the Poisson + BFS condition occupying the frustrated short-range order region.
+    This three-way separation &mdash; periodic, frustrated short-range order, and amorphous &mdash;
+    is reminiscent of orientational order classifications in condensed matter physics,
+    though the analogy remains informal (see Section 8.4).
+    The $|R_1|$ vs $\xi$ scatter plot (Figure 11) visualises this space,
+    with the BFS conditions occupying the frustrated short-range order region.
   </p>
 
   <h3>7.5 $k$-Invariance of Quality Metrics</h3>
   <p>
-    An important property of all quality metrics is their invariance to the kake count $k$.
-    All eight metrics &mdash; $E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_1$, $R_2$, $R_3$, $\xi$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ &mdash;
-    depend only on the primary angle $\phi_i$ of each tile,
-    which is determined entirely by the tile placement and angle assignment strategies.
+    All eight metrics depend only on the primary angle $\phi_i$ of each tile
+    and are therefore invariant to the kake count $k$.
     The secondary strokes added for $k \geq 2$ (at fixed angular offsets of 45&deg;, 90&deg;, etc.)
     do not influence any of the metrics.
-  </p>
-  <p>
-    This $k$-invariance is a limitation of the current metric framework:
-    the metrics cannot distinguish between a $k = 1$ and $k = 4$ configuration
+    This means the metrics cannot distinguish between a $k = 1$ and $k = 4$ configuration
     that share the same primary angles, even though they look very different visually.
     We acknowledge this as a gap and propose $k$-aware metrics as future work (Section 8.5).
   </p>
 
   <h3>7.6 Limitations</h3>
   <ul>
+    <li><strong>Metrics do not capture subjective quality.</strong>
+        The proposed condition does not rank first on any metric.
+        The gap between metric rankings and visual quality
+        is the most significant limitation of this work (Section 7.3).</li>
     <li>All evaluation is metric-based. A human perceptual study would strengthen the conclusions.</li>
     <li>The experiment uses a single region size and tile size. Scalability to larger regions has not been tested.</li>
     <li>The 360-candidate grid for BFS is a discretisation; finer grids or continuous optimisation may improve results marginally.</li>
     <li>The quality metrics are $k$-invariant: they capture only primary-angle structure and cannot evaluate the visual contribution of secondary hatch layers (see Section 7.5).</li>
-    <li>All conditions use Voronoi adjacency derived from Delaunay triangulation of tile centres. This ensures consistency between the BFS optimisation graph and metric evaluation, but other adjacency definitions (e.g. $k$-nearest-neighbours or radius-based) remain unexplored.</li>
-    <li>The Grid + Checkerboard condition uses a slightly different tile count (64 vs. ~69) than the Poisson-disk conditions due to its regular grid spacing, though the difference (~7%) is small enough to permit direct metric comparison (see Section 7.3).</li>
-    <li>ANOVA assumptions (normality of residuals, homoscedasticity) have not been formally verified via Shapiro&ndash;Wilk or Levene&rsquo;s tests. Nonparametric alternatives (e.g. Kruskal&ndash;Wallis) have not been compared.</li>
-    <li>The exponential decay model for $\xi$ has not been validated against alternatives (e.g. power-law decay). Goodness-of-fit statistics ($R^2$, residual plots) are not reported. See the caveats in Section 3.3.</li>
-    <li>The region labels in the $|R_1|$ vs $\xi$ scatter plot (Figure 11) are qualitative annotations without quantitatively defined classification boundaries.</li>
-    <li>No single condition dominates all eight metrics. The recommendation of Poisson-disk + BFS greedy reflects a subjective weighting of metric importance, not a formally defined composite score.</li>
+    <li>All conditions use Voronoi adjacency derived from Delaunay triangulation of tile centres. Other adjacency definitions (e.g. $k$-nearest-neighbours or radius-based) remain unexplored.</li>
+    <li>The exponential decay model for $\xi$ has not been validated against alternative decay models.
+        $R^2 \approx 0.7$ for BFS conditions indicates acceptable but imperfect fit (see Appendix A).</li>
+    <li>ANOVA assumptions (normality, homoscedasticity) are violated for most metrics
+        (Shapiro&ndash;Wilk and Levene&rsquo;s tests significant; see Appendix A).
+        The large sample size ($n = {{ n_seeds }}$ per condition) provides robustness,
+        but nonparametric alternatives have not been applied.</li>
   </ul>
 
   <!-- 8. Future Work -->
@@ -968,7 +915,7 @@
 
   <h3>8.3 Nawaami (Curved-Line Hatching)</h3>
   <p>
-    <strong>Nawaami</strong> (ナワアミ, also called <em>kakenawa</em> カケナワ, literally &ldquo;rope net&rdquo;)
+    <strong>Nawaami</strong> (&#x30CA;&#x30EF;&#x30A2;&#x30DF;, also called <em>kakenawa</em> &#x30AB;&#x30B1;&#x30CA;&#x30EF;, literally &ldquo;rope net&rdquo;)
     is a related manga technique that replaces straight hatching lines with curved, sinuous strokes
     bundled within trapezoidal guide shapes.
     These curved bundles chain together to form flowing, rope-like textures
@@ -1017,25 +964,31 @@
   <p>
     This report presented the first mathematical formulation of kakeami quality
     and a controlled experiment evaluating tile placement and angle assignment strategies.
-    We identified five properties of good kakeami and proposed eight complementary metrics to measure them:
-    angular metrics ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$),
-    autocorrelation metrics ($R_1$, $R_2$, $R_3$, $\xi$),
-    and spatial metrics ($C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
-    The $R_k$ correlogram separates conditions into three qualitatively distinct regimes &mdash;
-    periodic (checkerboard), frustrated short-range order (BFS greedy),
-    and amorphous (random) &mdash; an observation reminiscent of orientational order
-    classifications in condensed matter physics, though the analogy remains informal.
-    The 2&times;2 factorial experiment with 100 seeds demonstrated that
-    angle assignment is the dominant factor ($\eta^2 \approx 0.94$),
-    while Poisson-disk placement provides superior spatial uniformity.
-    No single condition dominates all metrics;
-    the proposed Poisson-disk + BFS greedy combination achieves the best balance
-    of local contrast, angular diversity, spatial coverage, and aperiodicity
-    among the stochastic conditions.
+    The proposed Poisson-disk + BFS greedy algorithm produces kakeami
+    that is subjectively the most natural among all tested conditions &mdash;
+    achieving angular contrast and visible &ldquo;grain&rdquo; throughout the pattern
+    without mechanical repetition.
+  </p>
+  <p>
+    However, none of the eight proposed quality metrics ranks this condition first.
+    $E_{\mathrm{contrast}}$ favours the checkerboard; $H_{\mathrm{angle}}$ favours random angles;
+    and $R_k \approx 0$ is trivially achieved by random conditions lacking any structure.
+    The metrics are useful for ablation &mdash;
+    the 2&times;2 factorial ANOVA confirms that angle assignment is the dominant factor
+    ($\eta^2 \approx 0.94$) and Poisson-disk placement provides superior spatial uniformity &mdash;
+    but they do not capture the holistic quality that makes one kakeami pattern look better than another.
+  </p>
+  <p>
+    The core open problem is defining a metric for &ldquo;grain&rdquo; &mdash;
+    the simultaneous achievement of local angular contrast, angle diversity, and spatial regularity
+    that characterises natural-looking kakeami.
+    The $R_k$ correlogram offers a partial path forward, separating conditions into
+    periodic, frustrated short-range order, and amorphous regimes,
+    but it does not directly measure visual quality.
     Future work includes tonal gradation via spatially varying $k$,
     generalisation to arbitrary tile shapes and fill patterns,
-    spectral analysis of the $R_k$ sequence,
-    and development of $k$-aware quality metrics.
+    and &mdash; most critically &mdash; development of a quality metric
+    that agrees with human visual judgement.
   </p>
 
   <!-- 10. References -->
@@ -1052,16 +1005,130 @@
     <li>Beaufort, P.-A., Lambrechts, J., Henrotte, F., Geuzaine, C., &amp; Remacle, J.-F. (2017). Computing cross fields &mdash; A PDE approach based on the Ginzburg-Landau theory. <em>arXiv:1706.01344</em>.</li>
     <li>Viertel, R., &amp; Osting, B. (2019). An Approach to Quad Meshing Based on Harmonic Cross-Valued Maps and the Ginzburg-Landau Theory. <em>SIAM J. Sci. Comput.</em>, 41(1).</li>
     <li>Vaxman, A., et al. (2016). Directional Field Synthesis, Design, and Processing. <em>Computer Graphics Forum</em>, 35(2), 545&ndash;572.</li>
-    <li>カケアミ. Pixiv Encyclopedia. <a href="https://dic.pixiv.net/a/%E3%82%AB%E3%82%B1%E3%82%A2%E3%83%9F">https://dic.pixiv.net/a/カケアミ</a>.</li>
-    <li>Toudo, R. (2003). <em>マンガの基礎デッサン</em> [Manga Basic Drawing]. Hobby Japan.</li>
+    <li>&#x30AB;&#x30B1;&#x30A2;&#x30DF;. Pixiv Encyclopedia. <a href="https://dic.pixiv.net/a/%E3%82%AB%E3%82%B1%E3%82%A2%E3%83%9F">https://dic.pixiv.net/a/&#x30AB;&#x30B1;&#x30A2;&#x30DF;</a>.</li>
+    <li>Toudo, R. (2003). <em>&#x30DE;&#x30F3;&#x30AC;&#x306E;&#x57FA;&#x790E;&#x30C7;&#x30C3;&#x30B5;&#x30F3;</em> [Manga Basic Drawing]. Hobby Japan.</li>
     <li>Japanese with Anime. (2020). Kakeami. <a href="https://www.japanesewithanime.com/2020/03/kakeami.html">www.japanesewithanime.com/2020/03/kakeami.html</a>.</li>
-    <li>Emiya Manga Class. (2018). カケアミの描き方. <a href="http://lanmy.net/2018/05/manga-kakeami/">lanmy.net/2018/05/manga-kakeami/</a>.</li>
+    <li>Emiya Manga Class. (2018). &#x30AB;&#x30B1;&#x30A2;&#x30DF;&#x306E;&#x63CF;&#x304D;&#x65B9;. <a href="http://lanmy.net/2018/05/manga-kakeami/">lanmy.net/2018/05/manga-kakeami/</a>.</li>
     <li>Shechtman, D., Blech, I., Gratias, D., &amp; Cahn, J. W. (1984). Metallic phase with long-range orientational order and no translational symmetry. <em>Physical Review Letters</em>, 53(20), 1951&ndash;1953.</li>
     <li>de Gennes, P.-G., &amp; Prost, J. (1993). <em>The Physics of Liquid Crystals</em> (2nd ed.). Oxford University Press.</li>
     <li>Cressie, N. (1993). <em>Statistics for Spatial Data</em> (Revised ed.). Wiley.</li>
     <li>Cliff, A. D., &amp; Ord, J. K. (1981). <em>Spatial Processes: Models &amp; Applications</em>. Pion.</li>
     <li>Toulouse, G. (1977). Theory of the frustration effect in spin glasses. <em>Communications on Physics</em>, 2, 115&ndash;119.</li>
   </ol>
+
+  <!-- Appendices -->
+  <div class="appendix">
+  <h2>Appendix A. Two-Way ANOVA Tables</h2>
+  <p>
+    Two-way ANOVA (Type II) with placement and angle as fixed factors.
+    Only the four 2&times;2 factorial conditions are included
+    (gridCheckerboard is excluded).
+    $\eta^2$ and bias-corrected $\omega^2$ are reported as effect size measures.
+    Assumption tests (Shapiro&ndash;Wilk for normality of residuals,
+    Levene&rsquo;s test for homoscedasticity) are reported below each table.
+    No correction for multiple testing across metrics is applied.
+  </p>
+
+  {% for metric_plain, rows in anova_data.items() %}
+  <details>
+    <summary>ANOVA: ${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('H_angle', 'H_{\\mathrm{angle}}').replace('C_cov', 'C_{\\mathrm{cov}}').replace('U_vor', 'U_{\\mathrm{vor}}').replace('R_1', 'R_1').replace('R_2', 'R_2').replace('R_3', 'R_3').replace('xi', '\\xi') }}$</summary>
+  <table>
+    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th><th>$\omega^2$</th></tr>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.source }}</td>
+      <td>{{ row.ss }}</td>
+      <td>{{ row.df }}</td>
+      <td>{{ row.f }}</td>
+      <td>{{ row.p }}</td>
+      <td>{{ row.eta_sq }}</td>
+      <td>{{ row.omega_sq }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% if anova_exclusions.get(metric_plain, 0) > 0 %}
+  <p style="font-size: 0.85rem; color: #555;">
+    {{ anova_exclusions[metric_plain] }} rows excluded due to non-finite values.
+  </p>
+  {% endif %}
+  {% if assumption_data.get(metric_plain) %}
+  <p style="font-size: 0.85rem; color: #555;">
+    Assumption tests &mdash;
+    Shapiro&ndash;Wilk: $W = {{ assumption_data[metric_plain].shapiro_stat }}$, $p = {{ assumption_data[metric_plain].shapiro_p }}$;
+    Levene: $F = {{ assumption_data[metric_plain].levene_stat }}$, $p = {{ assumption_data[metric_plain].levene_p }}$.
+  </p>
+  {% endif %}
+  </details>
+  {% endfor %}
+
+  {% if xi_r2_data %}
+  <h4>Goodness of Fit for $\xi$ (Exponential Decay Model)</h4>
+  <p>
+    Mean $R^2$ values for the per-seed exponential decay fit $|R_k| \approx A \exp(-k/\xi)$:
+  </p>
+  <table>
+    <tr><th>Condition</th><th>Mean $R^2$</th></tr>
+    {% for cond_label, r2_val in xi_r2_data.items() %}
+    <tr><td>{{ cond_label }}</td><td>{{ r2_val }}</td></tr>
+    {% endfor %}
+  </table>
+  <p style="font-size: 0.85rem; color: #555;">
+    $R^2 \approx 0.7$ for BFS conditions indicates acceptable but imperfect fit.
+    Negative $R^2$ for random and checkerboard conditions indicates model inapplicability
+    (see Section 3.3 caveats).
+    Alternative decay models (e.g. power-law $|R_k| \sim k^{-\alpha}$) have not been compared.
+  </p>
+  {% endif %}
+
+  <h2>Appendix B. Pairwise Effect Sizes (Cohen&rsquo;s $d$)</h2>
+  <p>
+    Cohen&rsquo;s $d$ (pooled SD) for the four factorial conditions (6 pairs);
+    the deterministic gridCheckerboard condition is excluded.
+    Positive $d$ indicates the first condition scores higher than the second.
+    By convention: $|d| &lt; 0.2$ negligible, $0.2$&ndash;$0.5$ small, $0.5$&ndash;$0.8$ medium, $&gt; 0.8$ large.
+  </p>
+
+  {% for metric_plain, pairs in effect_data.items() %}
+  <details>
+    <summary>${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('H_angle', 'H_{\\mathrm{angle}}').replace('C_cov', 'C_{\\mathrm{cov}}').replace('U_vor', 'U_{\\mathrm{vor}}').replace('R_2', 'R_2').replace('R_3', 'R_3') }}$</summary>
+  <table>
+    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
+    {% for pair in pairs %}
+    <tr><td>{{ pair.pair }}</td><td>{{ pair.d }}</td></tr>
+    {% endfor %}
+  </table>
+  </details>
+  {% endfor %}
+
+  <h2>Appendix C. Tukey HSD Post-Hoc Comparisons</h2>
+  <p>
+    Tukey&rsquo;s Honestly Significant Difference test ($\alpha = 0.05$) for
+    the four factorial conditions (6 pairwise comparisons per metric).
+    &ldquo;Reject&rdquo; indicates that the mean difference is statistically significant
+    after correction for multiple comparisons within each metric.
+  </p>
+
+  {% for metric_plain, rows in tukey_data.items() %}
+  <details>
+    <summary>${{ metric_plain.replace('E_contrast', 'E_{\\mathrm{contrast}}').replace('H_angle', 'H_{\\mathrm{angle}}').replace('C_cov', 'C_{\\mathrm{cov}}').replace('U_vor', 'U_{\\mathrm{vor}}').replace('R_2', 'R_2').replace('R_3', 'R_3').replace('xi', '\\xi') }}$</summary>
+  <table>
+    <tr><th>Group 1</th><th>Group 2</th><th>Mean Diff</th><th>$p$-adj</th><th>Lower</th><th>Upper</th><th>Reject</th></tr>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.group1 }}</td>
+      <td>{{ row.group2 }}</td>
+      <td>{{ row.meandiff }}</td>
+      <td>{{ row.p_adj }}</td>
+      <td>{{ row.lower }}</td>
+      <td>{{ row.upper }}</td>
+      <td>{{ row.reject }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  </details>
+  {% endfor %}
+
+  </div><!-- /appendix -->
 
   <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--color-border); font-size: 0.8rem; color: #999; text-align: center;">
     Generated by <a href="https://github.com/kakeami/kakeami-generator" style="color: var(--color-accent);">kakeami-generator</a> experiment framework.

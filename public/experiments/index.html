@@ -24,16 +24,15 @@
      4.4 Experimental Conditions (2x2 + checkerboard)
   5. Experimental Setup
   6. Results
-     6.1 Quality Metrics (box plots, correlogram)
-     6.2 Summary Table
-     6.3 Statistical Analysis (ANOVA, effect sizes)
+     6.1 Representative Images
+     6.2 Quality Metrics (box plots, correlogram)
+     6.3 Summary Table
      6.4 |R_1| vs ξ Scatter
-     6.5 Representative Images
   7. Discussion
      7.1 Effect of Angle Assignment
      7.2 Effect of Tile Placement
-     7.3 Checkerboard as Crystalline Order
-     7.4 Correlation Length Analysis and Frustrated Short-Range Order
+     7.3 The Gap Between Metrics and Subjective Quality
+     7.4 Correlation Structure
      7.5 k-Invariance of Quality Metrics
      7.6 Limitations
   8. Future Work
@@ -46,6 +45,9 @@
      8.5 k-Aware Quality Metrics
   9. Conclusion
   10. References
+  Appendix A. Two-Way ANOVA Tables
+  Appendix B. Pairwise Effect Sizes (Cohen's d)
+  Appendix C. Tukey HSD Post-Hoc Comparisons
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -135,6 +137,11 @@
     .back-link { display: inline-block; margin-bottom: 1rem; font-size: 0.9rem; color: var(--color-accent); text-decoration: none; }
     .back-link:hover { text-decoration: underline; }
 
+    /* Appendix */
+    .appendix h2 { color: #555; }
+    .appendix details { margin: 0.5rem 0; }
+    .appendix summary { cursor: pointer; font-weight: bold; font-size: 0.95rem; margin-bottom: 0.3rem; }
+
     /* Responsive */
     @media (max-width: 600px) {
       .image-grid { grid-template-columns: repeat(3, 1fr); }
@@ -160,37 +167,34 @@
   <p>
     Kakeami is a traditional manga shading technique in which small rectangular tiles are filled
     with parallel hatching lines at varying angles to create tonal gradation.
-    Despite its importance in manga production, no formal framework exists
-    for defining kakeami quality or evaluating automatic generation algorithms.
-    This report presents the first mathematical formulation of kakeami quality,
-    proposing eight complementary metrics &mdash;
+    We propose an automatic generation algorithm combining Poisson-disk tile placement,
+    Voronoi adjacency construction, and BFS greedy angle assignment,
+    which produces the most natural-looking kakeami among all tested conditions by visual inspection.
+    To evaluate this claim quantitatively, we introduce eight complementary quality metrics &mdash;
     angle contrast ($E_{\mathrm{contrast}}$), angle entropy ($H_{\mathrm{angle}}$),
     angle autocorrelation at graph distances 1&ndash;3 ($R_1$, $R_2$, $R_3$),
     correlation length ($\xi$),
     coverage ratio ($C_{\mathrm{cov}}$), and Voronoi cell area CV ($U_{\mathrm{vor}}$) &mdash;
-    drawing on concepts from spatial statistics and orientational order in condensed matter physics.
-    We argue that good kakeami exhibits <em>frustrated short-range order</em>:
-    short-range angular contrast (high $E_{\mathrm{contrast}}$) without long-range periodic repetition ($R_k \approx 0$).
-    We conduct a controlled 2&times;2 factorial experiment (tile placement &times; angle assignment)
-    with 100 random seeds, supplemented by a deterministic grid-checkerboard reference condition.
-    Two-way ANOVA reveals that angle assignment is the dominant factor
-    ($\eta^2 \approx 0.94$ for $E_{\mathrm{contrast}}$, $\eta^2 \approx 0.89$ for $R_2$),
-    and the proposed Poisson-disk + BFS greedy combination achieves the best balance
-    of local contrast, angular diversity, spatial coverage, and aperiodicity
-    among the stochastic conditions.
-    No single condition dominates all metrics.
-    The $R_k$ autocorrelation metrics reveal the structure of angle correlations beyond immediate neighbours:
-    random conditions show $R_2 \approx 0$ (no correlation),
-    while BFS greedy introduces a mild positive $R_2$ as a side effect of local contrast maximisation.
-    The checkerboard&rsquo;s low angle diversity ($H_{\mathrm{angle}} \approx 0.28$ vs. $\geq 0.95$ for BFS)
-    remains the clearest discriminator of its mechanical character.
+    and conduct a controlled 2&times;2 factorial experiment with 100 random seeds,
+    supplemented by a deterministic grid-checkerboard reference condition.
+  </p>
+  <p>
+    The proposed condition does not rank first on any of the eight metrics.
+    The checkerboard achieves the highest $E_{\mathrm{contrast}}$ despite looking mechanical;
+    random-angle conditions achieve the highest $H_{\mathrm{angle}}$ while lacking consistent local contrast.
+    Two-way ANOVA confirms that angle assignment is the dominant factor
+    ($\eta^2 \approx 0.94$ for $E_{\mathrm{contrast}}$)
+    and the metrics are useful for component-level ablation,
+    but they fail to capture the holistic visual quality &mdash; the &ldquo;grain&rdquo; &mdash;
+    that distinguishes natural-looking kakeami from mechanical or random patterns.
+    Defining a metric that aligns with subjective kakeami quality remains an open problem.
   </p>
 
   <!-- 1. Introduction -->
   <h2>1. Introduction</h2>
 
   <p>
-    <strong>Kakeami</strong> (カケアミ) is a shading technique in Japanese manga.
+    <strong>Kakeami</strong> (&#x30AB;&#x30B1;&#x30A2;&#x30DF;) is a shading technique in Japanese manga.
     Small blocks are filled with parallel hatching lines,
     and adjacent blocks use different angles to create tonal gradation
     (Pixiv Encyclopedia; Toudo, 2003).
@@ -220,14 +224,21 @@
     and <strong>angle assignment</strong> (BFS greedy vs. random).
   </p>
   <p>
+    A central finding of this work is that while the proposed Poisson-disk + BFS greedy algorithm
+    produces subjectively superior kakeami &mdash; with angular contrast visible everywhere
+    and a natural &ldquo;grain&rdquo; that avoids mechanical repetition &mdash;
+    none of the eight proposed metrics ranks it first.
+    This reveals a fundamental gap between formal quality measures and human visual judgement.
+  </p>
+  <p>
     The remainder of the report is organised as follows.
     Section 2 reviews related work in NPR hatching and manga generation to identify the gap this work addresses.
     Section 3 introduces a novel mathematical formulation for kakeami quality,
     drawing on concepts from spatial statistics, direction field theory, and condensed matter physics.
     Section 4 describes the proposed algorithm and the baseline conditions.
-    Section 5 details the experimental setup, Section 6 presents the quantitative results
-    including two-way ANOVA and effect size analysis,
-    Section 7 discusses their implications, Section 8 outlines directions for future work,
+    Section 5 details the experimental setup, Section 6 presents the quantitative results,
+    Section 7 discusses their implications &mdash; including the gap between metrics and subjective quality &mdash;
+    Section 8 outlines directions for future work,
     and Section 9 concludes.
   </p>
 
@@ -396,13 +407,13 @@
   <p>
     <strong>Caveats.</strong>
     The exponential decay model is a working hypothesis;
-    goodness-of-fit ($R^2$, residual analysis) has not been formally assessed,
-    and alternative models (e.g. power-law decay $|R_k| \sim k^{-\alpha}$) have not been compared.
+    goodness-of-fit is assessed via $R^2$ (see Appendix A),
+    but alternative models (e.g. power-law decay $|R_k| \sim k^{-\alpha}$) have not been compared.
     For the checkerboard condition, $|R_k|$ oscillates rather than decays,
     so the fit does not converge and $\xi = \infty$ is a sentinel value indicating model failure,
     not a physically meaningful infinite correlation length.
-    Similarly, $\xi = 0$ for random conditions reflects the absence of any correlation to fit,
-    rather than a meaningful zero-length correlation.
+    For random conditions, the near-zero $|R_k|$ profile lacks any decay to fit,
+    producing large $\xi$ values that indicate model inapplicability, not long-range correlation.
     These boundary cases should be interpreted as &ldquo;outside the model&rsquo;s domain&rdquo;
     rather than as quantitative measurements.
   </p>
@@ -561,792 +572,17 @@
   <!-- 6. Results -->
   <h2>6. Results</h2>
   <p>
-    We present the experimental results using the eight quality metrics defined in Section 3
-    ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_1$, $R_2$, $R_3$, $\xi$, $C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
+    We present the experimental results using the eight quality metrics defined in Section 3.
     All metrics are computed at $k = 1$.
-    Section 6.1 shows box plots, Section 6.2 provides summary statistics,
-    Section 6.3 presents the statistical analysis (two-way ANOVA and effect sizes),
-    and Section 6.4 shows representative images across $k$ values.
+    Section 6.1 shows representative images,
+    Section 6.2 presents box plots and the correlogram,
+    Section 6.3 provides summary statistics,
+    and Section 6.4 shows the $|R_1|$ vs $\xi$ scatter.
+    Full statistical analysis (two-way ANOVA, pairwise effect sizes, and post-hoc tests)
+    is provided in the Appendices.
   </p>
 
-  <h3>6.1 Quality Metrics</h3>
-  <p>
-    <em>Note:</em> The Grid + Checkerboard condition is a deterministic reference configuration
-    that produces identical results across all seeds (zero variance in the box plots).
-    Its role as a metric-vulnerability demonstration is discussed in Section 7.3.
-  </p>
-
-  
-  <figure>
-    <img src="assets/boxplot_eContrast.png" alt="Box plot of eContrast" />
-    <figcaption>
-      Figure 2: $E_{\mathrm{contrast}}$ distribution across conditions ($k = 1$, 100 seeds).
-      
-    </figcaption>
-  </figure>
-  
-  <figure>
-    <img src="assets/boxplot_hAngle.png" alt="Box plot of hAngle" />
-    <figcaption>
-      Figure 3: Angle entropy $H_{\mathrm{angle}}$. Higher values indicate more diverse angle usage. The Grid + Checkerboard condition scores notably low ($\approx 0.28$) due to using only two angles.
-      
-    </figcaption>
-  </figure>
-  
-  <figure>
-    <img src="assets/boxplot_rAuto1.png" alt="Box plot of rAuto1" />
-    <figcaption>
-      Figure 4: Angle autocorrelation $R_1$ (nearest neighbours). BFS conditions achieve strong negative $R_1$ (high contrast).
-      
-    </figcaption>
-  </figure>
-  
-  <figure>
-    <img src="assets/boxplot_rAuto2.png" alt="Box plot of rAuto2" />
-    <figcaption>
-      Figure 5: Angle autocorrelation $R_2$ (distance 2). BFS greedy conditions show mild positive $R_2$ (greedy side effect); random conditions cluster near 0.
-      
-    </figcaption>
-  </figure>
-  
-  <figure>
-    <img src="assets/boxplot_rAuto3.png" alt="Box plot of rAuto3" />
-    <figcaption>
-      Figure 6: Angle autocorrelation $R_3$ (distance 3). The aperiodic conditions cluster near 0, while the checkerboard diverges.
-      
-    </figcaption>
-  </figure>
-  
-  <figure>
-    <img src="assets/boxplot_cCov.png" alt="Box plot of cCov" />
-    <figcaption>
-      Figure 7: Coverage ratio $C_{\mathrm{cov}}$. Higher values mean less visible background.
-      
-    </figcaption>
-  </figure>
-  
-  <figure>
-    <img src="assets/boxplot_uVor.png" alt="Box plot of uVor" />
-    <figcaption>
-      Figure 8: Voronoi cell area CV $U_{\mathrm{vor}}$. Lower values indicate more uniform tile spacing.
-      
-    </figcaption>
-  </figure>
-  
-  <figure>
-    <img src="assets/boxplot_xi.png" alt="Box plot of xi" />
-    <figcaption>
-      Figure 9: Correlation length $\xi$ distribution across conditions. Lower values indicate more rapid decorrelation of angular correlations with graph distance.
-      
-    </figcaption>
-  </figure>
-  
-
-  
-  <figure>
-    <img src="assets/correlogram.png" alt="Angle autocorrelation correlogram" />
-    <figcaption>Figure 10: Full $R_k$ correlogram (mean &plusmn; 95% CI). The checkerboard oscillates indefinitely;
-    BFS conditions decay rapidly; random conditions are flat near zero.</figcaption>
-  </figure>
-  
-
-  <h3>6.2 Summary Table</h3>
-  <p>
-    Cells with a <span style="background: var(--color-best); padding: 0.1em 0.3em;">dark green background</span>
-    indicate the best-performing condition for that metric;
-    cells with a <span style="background: var(--color-second-best); padding: 0.1em 0.3em;">light green background</span>
-    indicate the second-best condition.
-    Direction: higher is better for $E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, and $C_{\mathrm{cov}}$;
-    lower is better for $U_{\mathrm{vor}}$ and $\xi$;
-    $|R_k|$ closest to 0 is best for $R_1$, $R_2$, and $R_3$.
-    All metrics computed at $k = 1$.
-  </p>
-
-  <table>
-    <tr>
-      <th>Condition</th>
-      <th>$E_{\mathrm{contrast}}$</th>
-      <th>$H_{\mathrm{angle}}$</th>
-      <th>$R_1$</th>
-      <th>$R_2$</th>
-      <th>$R_3$</th>
-      <th>$C_{\mathrm{cov}}$</th>
-      <th>$U_{\mathrm{vor}}$</th>
-      <th>$\xi$</th>
-      <th>Tiles</th>
-      <th>Edges</th>
-    </tr>
-    
-    <tr>
-      <td>Poisson + BFS</td>
-      <td>0.640 ± 0.005</td>
-      <td>0.960 ± 0.022</td>
-      <td>-0.353 ± 0.017</td>
-      <td>0.168 ± 0.017</td>
-      <td>-0.067 ± 0.024</td>
-      <td class="second-best">0.948 ± 0.010</td>
-      <td class="second-best">0.240 ± 0.021</td>
-      <td class="second-best">1.305 ± 0.284</td>
-      <td>68.8</td>
-      <td>191.6</td>
-    </tr>
-    
-    <tr>
-      <td>Poisson + Random</td>
-      <td>0.497 ± 0.026</td>
-      <td class="best">0.968 ± 0.012</td>
-      <td class="second-best">0.006 ± 0.063</td>
-      <td class="best">-0.002 ± 0.040</td>
-      <td class="second-best">-0.004 ± 0.031</td>
-      <td>0.947 ± 0.010</td>
-      <td>0.240 ± 0.021</td>
-      <td>57.439 ± 46.904</td>
-      <td>68.8</td>
-      <td>191.6</td>
-    </tr>
-    
-    <tr>
-      <td>Random + BFS</td>
-      <td class="second-best">0.642 ± 0.006</td>
-      <td>0.959 ± 0.023</td>
-      <td>-0.358 ± 0.018</td>
-      <td>0.170 ± 0.017</td>
-      <td>-0.069 ± 0.020</td>
-      <td>0.749 ± 0.030</td>
-      <td>0.558 ± 0.073</td>
-      <td class="best">1.277 ± 0.206</td>
-      <td>68.8</td>
-      <td>192.1</td>
-    </tr>
-    
-    <tr>
-      <td>Random + Random</td>
-      <td>0.500 ± 0.023</td>
-      <td class="second-best">0.967 ± 0.015</td>
-      <td class="best">-0.000 ± 0.055</td>
-      <td class="second-best">-0.002 ± 0.037</td>
-      <td class="best">-0.002 ± 0.027</td>
-      <td>0.749 ± 0.030</td>
-      <td>0.558 ± 0.073</td>
-      <td>57.682 ± 46.570</td>
-      <td>68.8</td>
-      <td>192.1</td>
-    </tr>
-    
-    <tr style="font-style: italic;">
-      <td>Grid + Checkerboard&thinsp;*</td>
-      <td class="best">0.696 ± 0.000</td>
-      <td>0.279 ± 0.000</td>
-      <td>-0.391 ± 0.000</td>
-      <td>0.241 ± 0.000</td>
-      <td>-0.168 ± 0.000</td>
-      <td class="best">1.000 ± 0.000</td>
-      <td class="best">0.000 ± 0.000</td>
-      <td>2.047 ± 0.000</td>
-      <td>64.0</td>
-      <td>161.0</td>
-    </tr>
-    
-  </table>
-  <p style="font-size: 0.85rem; color: #555;">
-    * Grid + Checkerboard is a deterministic reference condition outside the 2&times;2 factorial design.
-    Its role is discussed in Section 7.3.
-  </p>
-
-  <h3>6.3 Statistical Analysis</h3>
-  <p>
-    To rigorously assess the effects of tile placement and angle assignment,
-    we perform a two-way ANOVA (Type II) with placement and angle as fixed factors.
-    The ANOVA uses only the original four 2&times;2 factorial conditions
-    (gridCheckerboard is excluded as it does not belong to the factorial design).
-    We report $F$-statistics, $p$-values, and effect sizes ($\eta^2 = SS_{\mathrm{effect}} / SS_{\mathrm{total}}$).
-    Note that $\eta^2$ has a known upward bias; partial $\eta^2$ or $\omega^2$ would be more conservative
-    estimates, and ANOVA assumptions (normality, homoscedasticity) have not been formally tested
-    (see Limitations, Section 7.6).
-    Pairwise comparisons (Tukey HSD at $\alpha = 0.05$ and Cohen's $d$)
-    are computed across all five conditions (10 pairs).
-    No correction for multiple testing across metrics is applied.
-  </p>
-
-  
-  <h4>ANOVA: $E_{\mathrm{contrast}}$</h4>
-  <table>
-    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
-    
-    <tr>
-      <td>Placement</td>
-      <td>0.000455</td>
-      <td>1</td>
-      <td>1.47</td>
-      <td>0.2261</td>
-      <td>0.0002</td>
-    </tr>
-    
-    <tr>
-      <td>Angle</td>
-      <td>2.014764</td>
-      <td>1</td>
-      <td>6512.32</td>
-      <td>0.0000</td>
-      <td>0.9425</td>
-    </tr>
-    
-    <tr>
-      <td>Placement × Angle</td>
-      <td>0.000023</td>
-      <td>1</td>
-      <td>0.07</td>
-      <td>0.7872</td>
-      <td>0.0000</td>
-    </tr>
-    
-    <tr>
-      <td>Residual</td>
-      <td>0.122513</td>
-      <td>396</td>
-      <td>—</td>
-      <td>—</td>
-      <td>0.0573</td>
-    </tr>
-    
-  </table>
-  
-  <h4>ANOVA: $H_{\mathrm{angle}}$</h4>
-  <table>
-    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
-    
-    <tr>
-      <td>Placement</td>
-      <td>0.000115</td>
-      <td>1</td>
-      <td>0.34</td>
-      <td>0.5609</td>
-      <td>0.0008</td>
-    </tr>
-    
-    <tr>
-      <td>Angle</td>
-      <td>0.006915</td>
-      <td>1</td>
-      <td>20.29</td>
-      <td>0.0000</td>
-      <td>0.0487</td>
-    </tr>
-    
-    <tr>
-      <td>Placement × Angle</td>
-      <td>0.000002</td>
-      <td>1</td>
-      <td>0.01</td>
-      <td>0.9331</td>
-      <td>0.0000</td>
-    </tr>
-    
-    <tr>
-      <td>Residual</td>
-      <td>0.134947</td>
-      <td>396</td>
-      <td>—</td>
-      <td>—</td>
-      <td>0.9505</td>
-    </tr>
-    
-  </table>
-  
-  <h4>ANOVA: $R_1$</h4>
-  <table>
-    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
-    
-    <tr>
-      <td>Placement</td>
-      <td>0.002996</td>
-      <td>1</td>
-      <td>1.57</td>
-      <td>0.2111</td>
-      <td>0.0002</td>
-    </tr>
-    
-    <tr>
-      <td>Angle</td>
-      <td>12.813288</td>
-      <td>1</td>
-      <td>6710.04</td>
-      <td>0.0000</td>
-      <td>0.9441</td>
-    </tr>
-    
-    <tr>
-      <td>Placement × Angle</td>
-      <td>0.000040</td>
-      <td>1</td>
-      <td>0.02</td>
-      <td>0.8849</td>
-      <td>0.0000</td>
-    </tr>
-    
-    <tr>
-      <td>Residual</td>
-      <td>0.756189</td>
-      <td>396</td>
-      <td>—</td>
-      <td>—</td>
-      <td>0.0557</td>
-    </tr>
-    
-  </table>
-  
-  <h4>ANOVA: $C_{\mathrm{cov}}$</h4>
-  <table>
-    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
-    
-    <tr>
-      <td>Placement</td>
-      <td>3.942295</td>
-      <td>1</td>
-      <td>7823.87</td>
-      <td>0.0000</td>
-      <td>0.9518</td>
-    </tr>
-    
-    <tr>
-      <td>Angle</td>
-      <td>0.000008</td>
-      <td>1</td>
-      <td>0.02</td>
-      <td>0.9001</td>
-      <td>0.0000</td>
-    </tr>
-    
-    <tr>
-      <td>Placement × Angle</td>
-      <td>0.000017</td>
-      <td>1</td>
-      <td>0.03</td>
-      <td>0.8543</td>
-      <td>0.0000</td>
-    </tr>
-    
-    <tr>
-      <td>Residual</td>
-      <td>0.199537</td>
-      <td>396</td>
-      <td>—</td>
-      <td>—</td>
-      <td>0.0482</td>
-    </tr>
-    
-  </table>
-  
-  <h4>ANOVA: $U_{\mathrm{vor}}$</h4>
-  <table>
-    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
-    
-    <tr>
-      <td>Placement</td>
-      <td>10.119846</td>
-      <td>1</td>
-      <td>3465.56</td>
-      <td>0.0000</td>
-      <td>0.8975</td>
-    </tr>
-    
-    <tr>
-      <td>Angle</td>
-      <td>0.000000</td>
-      <td>1</td>
-      <td>0.00</td>
-      <td>1.0000</td>
-      <td>0.0000</td>
-    </tr>
-    
-    <tr>
-      <td>Placement × Angle</td>
-      <td>0.000000</td>
-      <td>1</td>
-      <td>0.00</td>
-      <td>1.0000</td>
-      <td>0.0000</td>
-    </tr>
-    
-    <tr>
-      <td>Residual</td>
-      <td>1.156367</td>
-      <td>396</td>
-      <td>—</td>
-      <td>—</td>
-      <td>0.1025</td>
-    </tr>
-    
-  </table>
-  
-  <h4>ANOVA: $R_2$</h4>
-  <table>
-    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
-    
-    <tr>
-      <td>Placement</td>
-      <td>0.000135</td>
-      <td>1</td>
-      <td>0.15</td>
-      <td>0.6972</td>
-      <td>0.0000</td>
-    </tr>
-    
-    <tr>
-      <td>Angle</td>
-      <td>2.920270</td>
-      <td>1</td>
-      <td>3268.69</td>
-      <td>0.0000</td>
-      <td>0.8918</td>
-    </tr>
-    
-    <tr>
-      <td>Placement × Angle</td>
-      <td>0.000244</td>
-      <td>1</td>
-      <td>0.27</td>
-      <td>0.6013</td>
-      <td>0.0001</td>
-    </tr>
-    
-    <tr>
-      <td>Residual</td>
-      <td>0.353789</td>
-      <td>396</td>
-      <td>—</td>
-      <td>—</td>
-      <td>0.1080</td>
-    </tr>
-    
-  </table>
-  
-  <h4>ANOVA: $R_3$</h4>
-  <table>
-    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
-    
-    <tr>
-      <td>Placement</td>
-      <td>0.000000</td>
-      <td>1</td>
-      <td>0.00</td>
-      <td>0.9844</td>
-      <td>0.0000</td>
-    </tr>
-    
-    <tr>
-      <td>Angle</td>
-      <td>0.426088</td>
-      <td>1</td>
-      <td>647.16</td>
-      <td>0.0000</td>
-      <td>0.6200</td>
-    </tr>
-    
-    <tr>
-      <td>Placement × Angle</td>
-      <td>0.000398</td>
-      <td>1</td>
-      <td>0.60</td>
-      <td>0.4372</td>
-      <td>0.0006</td>
-    </tr>
-    
-    <tr>
-      <td>Residual</td>
-      <td>0.260723</td>
-      <td>396</td>
-      <td>—</td>
-      <td>—</td>
-      <td>0.3794</td>
-    </tr>
-    
-  </table>
-  
-  <h4>ANOVA: $\xi$</h4>
-  <table>
-    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th></tr>
-    
-    <tr>
-      <td>Placement</td>
-      <td>1.141877</td>
-      <td>1</td>
-      <td>0.00</td>
-      <td>0.9742</td>
-      <td>0.0000</td>
-    </tr>
-    
-    <tr>
-      <td>Angle</td>
-      <td>316624.747489</td>
-      <td>1</td>
-      <td>289.89</td>
-      <td>0.0000</td>
-      <td>0.4226</td>
-    </tr>
-    
-    <tr>
-      <td>Placement × Angle</td>
-      <td>1.837482</td>
-      <td>1</td>
-      <td>0.00</td>
-      <td>0.9673</td>
-      <td>0.0000</td>
-    </tr>
-    
-    <tr>
-      <td>Residual</td>
-      <td>432518.103745</td>
-      <td>396</td>
-      <td>—</td>
-      <td>—</td>
-      <td>0.5773</td>
-    </tr>
-    
-  </table>
-  
-
-  <h4>Pairwise Effect Sizes (Cohen's $d$)</h4>
-  <p>
-    Positive $d$ indicates the first condition scores higher than the second.
-    By convention: $|d| < 0.2$ negligible, $0.2$&ndash;$0.5$ small, $0.5$&ndash;$0.8$ medium, $> 0.8$ large.
-  </p>
-  <p>
-    <em>Note:</em> The Grid + Checkerboard condition is deterministic (zero variance across seeds).
-    Pairwise Cohen's $d$ involving this condition uses only the other condition's standard deviation
-    as the pooled SD, which may overstate the effect size.
-    These values should be interpreted with caution.
-  </p>
-
-  
-  <h4>$E_{\mathrm{contrast}}$</h4>
-  <table>
-    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
-    
-    <tr><td>Poisson + BFS vs Poisson + Random</td><td>7.654</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + BFS</td><td>-0.305</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + Random</td><td>8.509</td></tr>
-    
-    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>-15.193</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + BFS</td><td>-7.714</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + Random</td><td>-0.107</td></tr>
-    
-    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>-10.866</td></tr>
-    
-    <tr><td>Random + BFS vs Random + Random</td><td>8.570</td></tr>
-    
-    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>-13.516</td></tr>
-    
-    <tr><td>Random + Random vs Grid + Checkerboard</td><td>-12.215</td></tr>
-    
-  </table>
-  
-  <h4>$H_{\mathrm{angle}}$</h4>
-  <table>
-    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
-    
-    <tr><td>Poisson + BFS vs Poisson + Random</td><td>-0.480</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + BFS</td><td>0.042</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + Random</td><td>-0.387</td></tr>
-    
-    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>44.357</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + BFS</td><td>0.516</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + Random</td><td>0.089</td></tr>
-    
-    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>79.294</td></tr>
-    
-    <tr><td>Random + BFS vs Random + Random</td><td>-0.424</td></tr>
-    
-    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>42.538</td></tr>
-    
-    <tr><td>Random + Random vs Grid + Checkerboard</td><td>64.038</td></tr>
-    
-  </table>
-  
-  <h4>$R_1$</h4>
-  <table>
-    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
-    
-    <tr><td>Poisson + BFS vs Poisson + Random</td><td>-7.746</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + BFS</td><td>0.276</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + Random</td><td>-8.684</td></tr>
-    
-    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>3.260</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + BFS</td><td>7.799</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + Random</td><td>0.103</td></tr>
-    
-    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>8.874</td></tr>
-    
-    <tr><td>Random + BFS vs Random + Random</td><td>-8.729</td></tr>
-    
-    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>2.601</td></tr>
-    
-    <tr><td>Random + Random vs Grid + Checkerboard</td><td>10.072</td></tr>
-    
-  </table>
-  
-  <h4>$C_{\mathrm{cov}}$</h4>
-  <table>
-    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
-    
-    <tr><td>Poisson + BFS vs Poisson + Random</td><td>0.069</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + BFS</td><td>8.987</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + Random</td><td>8.780</td></tr>
-    
-    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>-7.513</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + BFS</td><td>8.912</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + Random</td><td>8.709</td></tr>
-    
-    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>-7.262</td></tr>
-    
-    <tr><td>Random + BFS vs Random + Random</td><td>-0.004</td></tr>
-    
-    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>-11.953</td></tr>
-    
-    <tr><td>Random + Random vs Grid + Checkerboard</td><td>-11.651</td></tr>
-    
-  </table>
-  
-  <h4>$U_{\mathrm{vor}}$</h4>
-  <table>
-    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
-    
-    <tr><td>Poisson + BFS vs Poisson + Random</td><td>0.000</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + BFS</td><td>-5.887</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + Random</td><td>-5.887</td></tr>
-    
-    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>15.909</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + BFS</td><td>-5.887</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + Random</td><td>-5.887</td></tr>
-    
-    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>15.909</td></tr>
-    
-    <tr><td>Random + BFS vs Random + Random</td><td>0.000</td></tr>
-    
-    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>10.745</td></tr>
-    
-    <tr><td>Random + Random vs Grid + Checkerboard</td><td>10.745</td></tr>
-    
-  </table>
-  
-  <h4>$R_2$</h4>
-  <table>
-    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
-    
-    <tr><td>Poisson + BFS vs Poisson + Random</td><td>5.504</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + BFS</td><td>-0.157</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + Random</td><td>5.844</td></tr>
-    
-    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>-5.943</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + BFS</td><td>-5.602</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + Random</td><td>0.010</td></tr>
-    
-    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>-8.608</td></tr>
-    
-    <tr><td>Random + BFS vs Random + Random</td><td>5.949</td></tr>
-    
-    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>-5.782</td></tr>
-    
-    <tr><td>Random + Random vs Grid + Checkerboard</td><td>-9.242</td></tr>
-    
-  </table>
-  
-  <h4>$R_3$</h4>
-  <table>
-    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
-    
-    <tr><td>Poisson + BFS vs Poisson + Random</td><td>-2.296</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + BFS</td><td>0.089</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + Random</td><td>-2.584</td></tr>
-    
-    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>6.025</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + BFS</td><td>2.505</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + Random</td><td>-0.071</td></tr>
-    
-    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>7.485</td></tr>
-    
-    <tr><td>Random + BFS vs Random + Random</td><td>-2.849</td></tr>
-    
-    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>7.024</td></tr>
-    
-    <tr><td>Random + Random vs Grid + Checkerboard</td><td>8.754</td></tr>
-    
-  </table>
-  
-  <h4>$xi$</h4>
-  <table>
-    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
-    
-    <tr><td>Poisson + BFS vs Poisson + Random</td><td>-1.692</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + BFS</td><td>0.116</td></tr>
-    
-    <tr><td>Poisson + BFS vs Random + Random</td><td>-1.712</td></tr>
-    
-    <tr><td>Poisson + BFS vs Grid + Checkerboard</td><td>-3.692</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + BFS</td><td>1.693</td></tr>
-    
-    <tr><td>Poisson + Random vs Random + Random</td><td>-0.005</td></tr>
-    
-    <tr><td>Poisson + Random vs Grid + Checkerboard</td><td>1.670</td></tr>
-    
-    <tr><td>Random + BFS vs Random + Random</td><td>-1.713</td></tr>
-    
-    <tr><td>Random + BFS vs Grid + Checkerboard</td><td>-5.283</td></tr>
-    
-    <tr><td>Random + Random vs Grid + Checkerboard</td><td>1.689</td></tr>
-    
-  </table>
-  
-
-  
-  <h3>6.4 $|R_1|$ vs $\xi$ Scatter</h3>
-  <p>
-    The scatter plot below maps each run in the space of nearest-neighbour contrast ($|R_1|$)
-    versus correlation length ($\xi$).
-    The five conditions separate into three clusters:
-    BFS conditions (upper-left, high $|R_1|$, low $\xi$),
-    random conditions (lower-left, low $|R_1|$, low $\xi$),
-    and the checkerboard (upper-right, high $|R_1|$, large $\xi$).
-  </p>
-  <figure>
-    <img src="assets/scatter_r1_xi.png" alt="|R_1| vs ξ scatter plot" />
-    <figcaption>Figure 11: Per-run scatter of $|R_1|$ vs $\xi$.
-    Note that region labels (Amorphous, Quasicrystalline, Crystalline) are descriptive annotations,
-    not quantitatively defined classification boundaries.</figcaption>
-  </figure>
-  
-
-  <h3>6.5 Representative Images</h3>
+  <h3>6.1 Representative Images</h3>
   <p>
     For each condition, the seed whose $E_{\mathrm{contrast}}$ ($k = 1$) is closest to the median is shown.
     Images are rendered at $k = 1, 2, 3, 4$ to illustrate the visual effect of layering.
@@ -1475,25 +711,227 @@
   </div>
   
 
+  <h3>6.2 Quality Metrics</h3>
+  <p>
+    <em>Note:</em> The Grid + Checkerboard condition is a deterministic reference configuration
+    that produces identical results across all seeds (zero variance in the box plots).
+    Its role is discussed in Section 7.4.
+  </p>
+
+  
+  <figure>
+    <img src="assets/boxplot_eContrast.png" alt="Box plot of eContrast" />
+    <figcaption>
+      Figure 2: $E_{\mathrm{contrast}}$ distribution across conditions ($k = 1$, 100 seeds).
+      
+    </figcaption>
+  </figure>
+  
+  <figure>
+    <img src="assets/boxplot_hAngle.png" alt="Box plot of hAngle" />
+    <figcaption>
+      Figure 3: Angle entropy $H_{\mathrm{angle}}$. Higher values indicate more diverse angle usage. The Grid + Checkerboard condition scores notably low ($\approx 0.28$) due to using only two angles.
+      
+    </figcaption>
+  </figure>
+  
+  <figure>
+    <img src="assets/boxplot_rAuto1.png" alt="Box plot of rAuto1" />
+    <figcaption>
+      Figure 4: Angle autocorrelation $R_1$ (nearest neighbours). BFS conditions achieve strong negative $R_1$ (high contrast).
+      
+    </figcaption>
+  </figure>
+  
+  <figure>
+    <img src="assets/boxplot_rAuto2.png" alt="Box plot of rAuto2" />
+    <figcaption>
+      Figure 5: Angle autocorrelation $R_2$ (distance 2). BFS greedy conditions show mild positive $R_2$ (greedy side effect); random conditions cluster near 0.
+      
+    </figcaption>
+  </figure>
+  
+  <figure>
+    <img src="assets/boxplot_rAuto3.png" alt="Box plot of rAuto3" />
+    <figcaption>
+      Figure 6: Angle autocorrelation $R_3$ (distance 3). The aperiodic conditions cluster near 0, while the checkerboard diverges.
+      
+    </figcaption>
+  </figure>
+  
+  <figure>
+    <img src="assets/boxplot_cCov.png" alt="Box plot of cCov" />
+    <figcaption>
+      Figure 7: Coverage ratio $C_{\mathrm{cov}}$. Higher values mean less visible background.
+      
+    </figcaption>
+  </figure>
+  
+  <figure>
+    <img src="assets/boxplot_uVor.png" alt="Box plot of uVor" />
+    <figcaption>
+      Figure 8: Voronoi cell area CV $U_{\mathrm{vor}}$. Lower values indicate more uniform tile spacing.
+      
+    </figcaption>
+  </figure>
+  
+  <figure>
+    <img src="assets/boxplot_xi.png" alt="Box plot of xi" />
+    <figcaption>
+      Figure 9: Correlation length $\xi$ distribution across conditions. Lower values indicate more rapid decorrelation of angular correlations with graph distance.
+      
+    </figcaption>
+  </figure>
+  
+
+  
+  <figure>
+    <img src="assets/correlogram.png" alt="Angle autocorrelation correlogram" />
+    <figcaption>Figure 10: Full $R_k$ correlogram (mean &plusmn; 95% CI). The checkerboard oscillates indefinitely;
+    BFS conditions decay rapidly; random conditions are flat near zero.</figcaption>
+  </figure>
+  
+
+  <h3>6.3 Summary Table</h3>
+  <p>
+    Cells with a <span style="background: var(--color-best); padding: 0.1em 0.3em;">dark green background</span>
+    indicate the best-performing condition for that metric;
+    cells with a <span style="background: var(--color-second-best); padding: 0.1em 0.3em;">light green background</span>
+    indicate the second-best condition.
+    Direction: higher is better for $E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, and $C_{\mathrm{cov}}$;
+    lower is better for $U_{\mathrm{vor}}$ and $\xi$;
+    $|R_k|$ closest to 0 is best for $R_1$, $R_2$, and $R_3$.
+    All metrics computed at $k = 1$.
+  </p>
+
+  <table>
+    <tr>
+      <th>Condition</th>
+      <th>$E_{\mathrm{contrast}}$</th>
+      <th>$H_{\mathrm{angle}}$</th>
+      <th>$R_1$</th>
+      <th>$R_2$</th>
+      <th>$R_3$</th>
+      <th>$C_{\mathrm{cov}}$</th>
+      <th>$U_{\mathrm{vor}}$</th>
+      <th>$\xi$</th>
+      <th>Tiles</th>
+      <th>Edges</th>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>0.640 ± 0.005</td>
+      <td>0.960 ± 0.022</td>
+      <td>-0.353 ± 0.017</td>
+      <td>0.168 ± 0.017</td>
+      <td>-0.067 ± 0.024</td>
+      <td class="second-best">0.948 ± 0.010</td>
+      <td class="second-best">0.240 ± 0.021</td>
+      <td class="second-best">1.305 ± 0.284</td>
+      <td>68.8</td>
+      <td>191.6</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>0.497 ± 0.026</td>
+      <td class="best">0.968 ± 0.012</td>
+      <td class="second-best">0.006 ± 0.063</td>
+      <td class="best">-0.002 ± 0.040</td>
+      <td class="second-best">-0.004 ± 0.031</td>
+      <td>0.947 ± 0.010</td>
+      <td>0.240 ± 0.021</td>
+      <td>57.439 ± 46.904</td>
+      <td>68.8</td>
+      <td>191.6</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td class="second-best">0.642 ± 0.006</td>
+      <td>0.959 ± 0.023</td>
+      <td>-0.358 ± 0.018</td>
+      <td>0.170 ± 0.017</td>
+      <td>-0.069 ± 0.020</td>
+      <td>0.749 ± 0.030</td>
+      <td>0.558 ± 0.073</td>
+      <td class="best">1.277 ± 0.206</td>
+      <td>68.8</td>
+      <td>192.1</td>
+    </tr>
+    
+    <tr>
+      <td>Random + Random</td>
+      <td>0.500 ± 0.023</td>
+      <td class="second-best">0.967 ± 0.015</td>
+      <td class="best">-0.000 ± 0.055</td>
+      <td class="second-best">-0.002 ± 0.037</td>
+      <td class="best">-0.002 ± 0.027</td>
+      <td>0.749 ± 0.030</td>
+      <td>0.558 ± 0.073</td>
+      <td>57.682 ± 46.570</td>
+      <td>68.8</td>
+      <td>192.1</td>
+    </tr>
+    
+    <tr style="font-style: italic;">
+      <td>Grid + Checkerboard&thinsp;*</td>
+      <td class="best">0.696 ± 0.000</td>
+      <td>0.279 ± 0.000</td>
+      <td>-0.391 ± 0.000</td>
+      <td>0.241 ± 0.000</td>
+      <td>-0.168 ± 0.000</td>
+      <td class="best">1.000 ± 0.000</td>
+      <td class="best">0.000 ± 0.000</td>
+      <td>2.047 ± 0.000</td>
+      <td>64.0</td>
+      <td>161.0</td>
+    </tr>
+    
+  </table>
+  <p style="font-size: 0.85rem; color: #555;">
+    * Grid + Checkerboard is a deterministic reference condition outside the 2&times;2 factorial design.
+    Its role is discussed in Section 7.4.
+  </p>
+
+  
+  <h3>6.4 $|R_1|$ vs $\xi$ Scatter</h3>
+  <p>
+    The scatter plot below maps each run in the space of nearest-neighbour contrast ($|R_1|$)
+    versus correlation length ($\xi$).
+    The five conditions separate into three clusters:
+    BFS conditions (upper-left, high $|R_1|$, low $\xi$),
+    random conditions (lower-left, low $|R_1|$, low $\xi$),
+    and the checkerboard (upper-right, high $|R_1|$, large $\xi$).
+  </p>
+  <figure>
+    <img src="assets/scatter_r1_xi.png" alt="|R_1| vs ξ scatter plot" />
+    <figcaption>Figure 11: Per-run scatter of $|R_1|$ vs $\xi$.
+    Note that region labels are descriptive annotations,
+    not quantitatively defined classification boundaries.</figcaption>
+  </figure>
+  
+
   <!-- 7. Discussion -->
   <h2>7. Discussion</h2>
   <p>
     The results in Section 6 reveal clear performance differences among the five conditions.
     Sections 7.1&ndash;7.2 analyse the two factors of the 2&times;2 factorial design,
-    Section 7.3 reinterprets the checkerboard condition through the lens of periodic vs. aperiodic order,
-    Section 7.4 discusses what the $R_k$ autocorrelation metrics and correlation length reveal about aperiodicity,
+    Section 7.3 addresses the central finding &mdash; the gap between metric rankings and subjective quality &mdash;
+    Section 7.4 discusses the correlation structure revealed by the $R_k$ metrics,
     Section 7.5 discusses $k$-invariance of the metric framework,
     and Section 7.6 identifies limitations.
   </p>
 
   <h3>7.1 Effect of Angle Assignment</h3>
   <p>
-    The two-way ANOVA confirms that the angle assignment strategy is the dominant factor.
-    For $E_{\mathrm{contrast}}$, the angle factor shows a large effect size ($\eta^2$),
-    indicating that BFS greedy assignment accounts for the majority of variance in angle contrast.
+    The two-way ANOVA (Appendix A) confirms that the angle assignment strategy is the dominant factor.
+    For $E_{\mathrm{contrast}}$, the angle factor shows $\eta^2 \approx 0.94$,
+    indicating that BFS greedy assignment accounts for the vast majority of variance in angle contrast.
     The BFS greedy strategy consistently outperforms random angle assignment on $E_{\mathrm{contrast}}$,
     confirming that local contrast maximisation via the adjacency graph
-    is the primary driver of visual quality.
+    is the primary driver of angular quality.
   </p>
 
   <h3>7.2 Effect of Tile Placement</h3>
@@ -1501,129 +939,117 @@
     While the angular metrics ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$)
     show little sensitivity to placement strategy,
     the spatial metrics reveal a stark difference.
-    Poisson-disk placement achieves near-perfect coverage ($C_{\mathrm{cov}} \approx 1$)
+    Poisson-disk placement achieves near-perfect coverage ($C_{\mathrm{cov}} \approx 0.95$)
     thanks to the 1.4&times; tile expansion and minimum-distance guarantee,
-    whereas uniform random placement leaves visible gaps ($C_{\mathrm{cov}} < 1$)
+    whereas uniform random placement leaves visible gaps ($C_{\mathrm{cov}} \approx 0.75$)
     due to tile clustering.
     The Voronoi cell area CV ($U_{\mathrm{vor}}$) confirms this:
     Poisson-disk conditions show significantly lower CV (more uniform spacing)
     than random conditions, which approach the theoretical Poisson process value of $\approx 0.53$.
-    These spatial metrics capture a critical quality dimension &mdash; visual completeness &mdash;
-    that the angular metrics alone cannot detect.
   </p>
 
-  <h3>7.3 Checkerboard as Crystalline Order</h3>
+  <h3>7.3 The Gap Between Metrics and Subjective Quality</h3>
   <p>
-    The Grid + Checkerboard condition can be understood through the analogy
-    of periodic vs. aperiodic order from condensed matter physics.
-    By placing tiles on a regular grid and alternating between just two angles (0&deg; and 90&deg;),
-    the checkerboard creates a <em>crystalline</em> pattern with competitive local contrast
-    but severely limited angle diversity ($H_{\mathrm{angle}} \approx 0.28$, using only 2 of 12 bins).
-    The Delaunay triangulation of the grid adds diagonal edges between same-angle tiles,
-    which moderates the checkerboard&rsquo;s $E_{\mathrm{contrast}}$ below the theoretical maximum
-    and produces a modest $R_2$ rather than the ideal $+1$ of a pure 4-connected grid.
+    A striking result of this experiment is that the proposed Poisson-disk + BFS greedy condition &mdash;
+    which produces the most natural-looking kakeami by visual inspection &mdash;
+    <strong>does not rank first on any of the eight proposed metrics</strong>.
+    $E_{\mathrm{contrast}}$ is highest for the checkerboard;
+    $H_{\mathrm{angle}}$ is highest for random-angle conditions;
+    $|R_k|$ closest to zero is achieved by random conditions (which have no angular structure at all);
+    and the spatial metrics ($C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$) are optimal for the deterministic grid.
   </p>
   <p>
-    The $R_k$ metrics reveal the structure of angle correlations in each condition.
-    BFS greedy conditions exhibit a mild positive $R_2 \approx 0.17$:
-    maximising local contrast at each BFS step introduces a small same-angle correlation at distance 2,
-    an expected side effect of greedy optimisation on finite-degree graphs.
-    Random-angle conditions show $R_2 \approx 0$ (no correlation at any distance), as expected.
-    The checkerboard&rsquo;s $R_2 \approx 0.24$ is the highest, consistent with its periodic structure,
-    though Delaunay diagonal edges dilute the purely 2-periodic signature.
+    The subjective quality of Poisson-disk + BFS greedy is characterised by two properties:
+    (1) angular contrast is visible <em>everywhere</em> in the pattern &mdash;
+    no local region shows adjacent tiles with similar angles fusing together;
+    and (2) the pattern has a visible <em>grain</em> &mdash;
+    the texture looks organic and varied, not mechanical.
+    We term this combination &ldquo;grain&rdquo;:
+    the per-tile angular variation is clearly perceptible across the entire field,
+    without any region appearing flat or repetitive.
   </p>
   <p>
-    The most robust discriminator of the checkerboard&rsquo;s mechanical character
-    remains $H_{\mathrm{angle}} \approx 0.28$ vs. $\geq 0.95$ for BFS conditions:
-    using only two angles produces a visually repetitive pattern
-    regardless of how well those angles contrast locally.
-    The gridCheckerboard condition uses 64 tiles (8&times;8 grid),
-    comparable to the ~69 tiles of Poisson-disk conditions,
-    enabling direct metric comparison.
+    The proposed metrics fail to capture this property because they are global averages.
+    $E_{\mathrm{contrast}}$ measures the mean pairwise contrast across all edges,
+    but does not penalise a pattern where high average contrast coexists with poor angle diversity
+    (as in the checkerboard, which uses only two angles).
+    $H_{\mathrm{angle}}$ measures angle diversity globally
+    but says nothing about whether diverse angles are arranged to contrast <em>locally</em>
+    (random conditions achieve high $H_{\mathrm{angle}}$ while lacking consistent local contrast).
+    The $R_k$ metrics detect periodicity and long-range correlation,
+    but $R_k \approx 0$ for random conditions simply reflects the absence of any structure,
+    not the presence of well-designed aperiodicity.
+  </p>
+  <p>
+    No simple weighted combination of the eight metrics resolves this issue:
+    any weighting that favours $E_{\mathrm{contrast}}$ elevates the checkerboard;
+    any weighting that favours $H_{\mathrm{angle}}$ elevates the random conditions.
+    The &ldquo;grain&rdquo; quality emerges from the <em>simultaneous</em> achievement of
+    high local contrast, high angle diversity, and spatial regularity &mdash;
+    a conjunction that no individual metric or linear combination captures.
+    Developing a metric that aligns with subjective kakeami quality remains an open problem.
   </p>
 
-  <h3>7.4 Correlation Length Analysis and Frustrated Short-Range Order</h3>
+  <h3>7.4 Correlation Structure</h3>
   <p>
-    <em>Terminology note.</em>
-    We borrow the term &ldquo;quasicrystalline&rdquo; loosely from condensed matter physics
-    to describe patterns with short-range angular order but no long-range periodicity.
-    This is an analogy, not a claim of structural equivalence with physical quasicrystals
-    (Shechtman et al., 1984), which exhibit strict long-range orientational order with forbidden symmetries.
-    The BFS greedy output more closely resembles a <em>frustrated short-range ordered</em> state.
-    Rigorous verification of the analogy would require spectral analysis (Section 8.4).
-  </p>
-  <p>
-    The full $R_k$ correlogram (Figure 10) reveals fundamentally different spatial structures
-    across conditions. The checkerboard&rsquo;s correlogram oscillates with period 2
-    ($R_k \approx (-1)^k$), never decaying &mdash; the hallmark of crystalline periodicity.
+    The $R_k$ correlogram (Figure 10) reveals three qualitatively distinct regimes.
+    The checkerboard oscillates with period 2 ($R_k \approx (-1)^k$), never decaying &mdash;
+    the hallmark of crystalline periodicity.
+    Its low angle diversity ($H_{\mathrm{angle}} \approx 0.28$, using only 2 of 12 angle bins)
+    remains the clearest discriminator of its mechanical character.
     Random conditions produce a flat correlogram near zero at all distances:
-    no angular structure at any scale. BFS greedy conditions show a qualitatively different pattern:
-    strong negative $R_1$ (high nearest-neighbour contrast) that decays rapidly,
-    with $R_2 \approx 0.17$ reflecting the structural side effect of greedy maximisation
-    (tiles at distance 2 are pushed in similar directions by their shared intermediate neighbour),
-    and near-zero correlations by $k = 3$&ndash;$4$.
+    no angular structure at any scale.
+    BFS greedy conditions show strong negative $R_1$ decaying rapidly to near-zero by $k = 3$&ndash;$4$,
+    with a mild positive $R_2 \approx 0.17$ reflecting the structural side effect of greedy maximisation
+    (tiles at distance 2 share an intermediate neighbour that constrains both their angles).
   </p>
   <p>
-    The correlation length $\xi$ quantifies this decay rate.
+    The correlation length $\xi$ quantifies this decay.
     BFS conditions achieve small $\xi$ values ($\approx 1$&ndash;$2$),
-    indicating that angular correlations are confined to the immediate neighbourhood.
-    The checkerboard produces $\xi = \infty$ because the exponential decay model fails
-    to fit the oscillatory $|R_k|$ profile (see caveats in Section 3.3).
-    Random conditions yield $\xi \approx 0$ because there is no correlation to fit.
-    In both cases, $\xi$ is a sentinel value indicating that the exponential model
-    does not apply, rather than a quantitative measurement.
+    indicating angular correlations confined to the immediate neighbourhood.
+    The checkerboard produces $\xi = \infty$ (the exponential decay model fails for oscillatory profiles),
+    and random conditions produce large $\xi$ values ($\approx 57$)
+    because the near-zero $|R_k|$ profile lacks any decay to fit &mdash;
+    a model artefact, not evidence of long-range correlation.
+    In both cases, $\xi$ is outside the model&rsquo;s domain rather than a quantitative measurement
+    (see Section 3.3).
   </p>
   <p>
-    This three-way separation &mdash; periodic (large $\xi$, oscillatory $R_k$),
-    frustrated short-range order (small $\xi$, decaying $R_k$ from strong $|R_1|$),
-    and amorphous (near-zero $R_k$ everywhere) &mdash;
-    is reminiscent of the classification of orientational order in condensed matter physics.
-    In liquid crystal theory, the correlation length characterises the spatial extent of
-    nematic ordering (de Gennes &amp; Prost, 1993);
-    in frustrated antiferromagnets, short correlation lengths arise from the impossibility
-    of simultaneously satisfying all pairwise constraints on a non-bipartite graph (Toulouse, 1977).
-    This analogy suggests that the BFS greedy algorithm produces a similar frustrated state:
-    each tile&rsquo;s angle is maximally different from its neighbours,
-    but this local repulsion cannot propagate coherently through the irregular Poisson-Voronoi topology.
-    However, BFS greedy is a sequential heuristic, not a ground-state search,
-    so the analogy to physical frustration remains informal.
-  </p>
-  <p>
-    The full correlogram and derived $\xi$ capture a genuinely independent property &mdash;
-    the spatial structure of angle correlations beyond immediate neighbours &mdash;
-    that $E_{\mathrm{contrast}}$ alone cannot detect.
-    The $|R_1|$ vs $\xi$ scatter plot (Figure 11) visualises this two-dimensional space,
-    with the Poisson + BFS condition occupying the frustrated short-range order region.
+    This three-way separation &mdash; periodic, frustrated short-range order, and amorphous &mdash;
+    is reminiscent of orientational order classifications in condensed matter physics,
+    though the analogy remains informal (see Section 8.4).
+    The $|R_1|$ vs $\xi$ scatter plot (Figure 11) visualises this space,
+    with the BFS conditions occupying the frustrated short-range order region.
   </p>
 
   <h3>7.5 $k$-Invariance of Quality Metrics</h3>
   <p>
-    An important property of all quality metrics is their invariance to the kake count $k$.
-    All eight metrics &mdash; $E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_1$, $R_2$, $R_3$, $\xi$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ &mdash;
-    depend only on the primary angle $\phi_i$ of each tile,
-    which is determined entirely by the tile placement and angle assignment strategies.
+    All eight metrics depend only on the primary angle $\phi_i$ of each tile
+    and are therefore invariant to the kake count $k$.
     The secondary strokes added for $k \geq 2$ (at fixed angular offsets of 45&deg;, 90&deg;, etc.)
     do not influence any of the metrics.
-  </p>
-  <p>
-    This $k$-invariance is a limitation of the current metric framework:
-    the metrics cannot distinguish between a $k = 1$ and $k = 4$ configuration
+    This means the metrics cannot distinguish between a $k = 1$ and $k = 4$ configuration
     that share the same primary angles, even though they look very different visually.
     We acknowledge this as a gap and propose $k$-aware metrics as future work (Section 8.5).
   </p>
 
   <h3>7.6 Limitations</h3>
   <ul>
+    <li><strong>Metrics do not capture subjective quality.</strong>
+        The proposed condition does not rank first on any metric.
+        The gap between metric rankings and visual quality
+        is the most significant limitation of this work (Section 7.3).</li>
     <li>All evaluation is metric-based. A human perceptual study would strengthen the conclusions.</li>
     <li>The experiment uses a single region size and tile size. Scalability to larger regions has not been tested.</li>
     <li>The 360-candidate grid for BFS is a discretisation; finer grids or continuous optimisation may improve results marginally.</li>
     <li>The quality metrics are $k$-invariant: they capture only primary-angle structure and cannot evaluate the visual contribution of secondary hatch layers (see Section 7.5).</li>
-    <li>All conditions use Voronoi adjacency derived from Delaunay triangulation of tile centres. This ensures consistency between the BFS optimisation graph and metric evaluation, but other adjacency definitions (e.g. $k$-nearest-neighbours or radius-based) remain unexplored.</li>
-    <li>The Grid + Checkerboard condition uses a slightly different tile count (64 vs. ~69) than the Poisson-disk conditions due to its regular grid spacing, though the difference (~7%) is small enough to permit direct metric comparison (see Section 7.3).</li>
-    <li>ANOVA assumptions (normality of residuals, homoscedasticity) have not been formally verified via Shapiro&ndash;Wilk or Levene&rsquo;s tests. Nonparametric alternatives (e.g. Kruskal&ndash;Wallis) have not been compared.</li>
-    <li>The exponential decay model for $\xi$ has not been validated against alternatives (e.g. power-law decay). Goodness-of-fit statistics ($R^2$, residual plots) are not reported. See the caveats in Section 3.3.</li>
-    <li>The region labels in the $|R_1|$ vs $\xi$ scatter plot (Figure 11) are qualitative annotations without quantitatively defined classification boundaries.</li>
-    <li>No single condition dominates all eight metrics. The recommendation of Poisson-disk + BFS greedy reflects a subjective weighting of metric importance, not a formally defined composite score.</li>
+    <li>All conditions use Voronoi adjacency derived from Delaunay triangulation of tile centres. Other adjacency definitions (e.g. $k$-nearest-neighbours or radius-based) remain unexplored.</li>
+    <li>The exponential decay model for $\xi$ has not been validated against alternative decay models.
+        $R^2 \approx 0.7$ for BFS conditions indicates acceptable but imperfect fit (see Appendix A).</li>
+    <li>ANOVA assumptions (normality, homoscedasticity) are violated for most metrics
+        (Shapiro&ndash;Wilk and Levene&rsquo;s tests significant; see Appendix A).
+        The large sample size ($n = 100$ per condition) provides robustness,
+        but nonparametric alternatives have not been applied.</li>
   </ul>
 
   <!-- 8. Future Work -->
@@ -1704,7 +1130,7 @@
 
   <h3>8.3 Nawaami (Curved-Line Hatching)</h3>
   <p>
-    <strong>Nawaami</strong> (ナワアミ, also called <em>kakenawa</em> カケナワ, literally &ldquo;rope net&rdquo;)
+    <strong>Nawaami</strong> (&#x30CA;&#x30EF;&#x30A2;&#x30DF;, also called <em>kakenawa</em> &#x30AB;&#x30B1;&#x30CA;&#x30EF;, literally &ldquo;rope net&rdquo;)
     is a related manga technique that replaces straight hatching lines with curved, sinuous strokes
     bundled within trapezoidal guide shapes.
     These curved bundles chain together to form flowing, rope-like textures
@@ -1753,25 +1179,31 @@
   <p>
     This report presented the first mathematical formulation of kakeami quality
     and a controlled experiment evaluating tile placement and angle assignment strategies.
-    We identified five properties of good kakeami and proposed eight complementary metrics to measure them:
-    angular metrics ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$),
-    autocorrelation metrics ($R_1$, $R_2$, $R_3$, $\xi$),
-    and spatial metrics ($C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
-    The $R_k$ correlogram separates conditions into three qualitatively distinct regimes &mdash;
-    periodic (checkerboard), frustrated short-range order (BFS greedy),
-    and amorphous (random) &mdash; an observation reminiscent of orientational order
-    classifications in condensed matter physics, though the analogy remains informal.
-    The 2&times;2 factorial experiment with 100 seeds demonstrated that
-    angle assignment is the dominant factor ($\eta^2 \approx 0.94$),
-    while Poisson-disk placement provides superior spatial uniformity.
-    No single condition dominates all metrics;
-    the proposed Poisson-disk + BFS greedy combination achieves the best balance
-    of local contrast, angular diversity, spatial coverage, and aperiodicity
-    among the stochastic conditions.
+    The proposed Poisson-disk + BFS greedy algorithm produces kakeami
+    that is subjectively the most natural among all tested conditions &mdash;
+    achieving angular contrast and visible &ldquo;grain&rdquo; throughout the pattern
+    without mechanical repetition.
+  </p>
+  <p>
+    However, none of the eight proposed quality metrics ranks this condition first.
+    $E_{\mathrm{contrast}}$ favours the checkerboard; $H_{\mathrm{angle}}$ favours random angles;
+    and $R_k \approx 0$ is trivially achieved by random conditions lacking any structure.
+    The metrics are useful for ablation &mdash;
+    the 2&times;2 factorial ANOVA confirms that angle assignment is the dominant factor
+    ($\eta^2 \approx 0.94$) and Poisson-disk placement provides superior spatial uniformity &mdash;
+    but they do not capture the holistic quality that makes one kakeami pattern look better than another.
+  </p>
+  <p>
+    The core open problem is defining a metric for &ldquo;grain&rdquo; &mdash;
+    the simultaneous achievement of local angular contrast, angle diversity, and spatial regularity
+    that characterises natural-looking kakeami.
+    The $R_k$ correlogram offers a partial path forward, separating conditions into
+    periodic, frustrated short-range order, and amorphous regimes,
+    but it does not directly measure visual quality.
     Future work includes tonal gradation via spatially varying $k$,
     generalisation to arbitrary tile shapes and fill patterns,
-    spectral analysis of the $R_k$ sequence,
-    and development of $k$-aware quality metrics.
+    and &mdash; most critically &mdash; development of a quality metric
+    that agrees with human visual judgement.
   </p>
 
   <!-- 10. References -->
@@ -1788,16 +1220,1232 @@
     <li>Beaufort, P.-A., Lambrechts, J., Henrotte, F., Geuzaine, C., &amp; Remacle, J.-F. (2017). Computing cross fields &mdash; A PDE approach based on the Ginzburg-Landau theory. <em>arXiv:1706.01344</em>.</li>
     <li>Viertel, R., &amp; Osting, B. (2019). An Approach to Quad Meshing Based on Harmonic Cross-Valued Maps and the Ginzburg-Landau Theory. <em>SIAM J. Sci. Comput.</em>, 41(1).</li>
     <li>Vaxman, A., et al. (2016). Directional Field Synthesis, Design, and Processing. <em>Computer Graphics Forum</em>, 35(2), 545&ndash;572.</li>
-    <li>カケアミ. Pixiv Encyclopedia. <a href="https://dic.pixiv.net/a/%E3%82%AB%E3%82%B1%E3%82%A2%E3%83%9F">https://dic.pixiv.net/a/カケアミ</a>.</li>
-    <li>Toudo, R. (2003). <em>マンガの基礎デッサン</em> [Manga Basic Drawing]. Hobby Japan.</li>
+    <li>&#x30AB;&#x30B1;&#x30A2;&#x30DF;. Pixiv Encyclopedia. <a href="https://dic.pixiv.net/a/%E3%82%AB%E3%82%B1%E3%82%A2%E3%83%9F">https://dic.pixiv.net/a/&#x30AB;&#x30B1;&#x30A2;&#x30DF;</a>.</li>
+    <li>Toudo, R. (2003). <em>&#x30DE;&#x30F3;&#x30AC;&#x306E;&#x57FA;&#x790E;&#x30C7;&#x30C3;&#x30B5;&#x30F3;</em> [Manga Basic Drawing]. Hobby Japan.</li>
     <li>Japanese with Anime. (2020). Kakeami. <a href="https://www.japanesewithanime.com/2020/03/kakeami.html">www.japanesewithanime.com/2020/03/kakeami.html</a>.</li>
-    <li>Emiya Manga Class. (2018). カケアミの描き方. <a href="http://lanmy.net/2018/05/manga-kakeami/">lanmy.net/2018/05/manga-kakeami/</a>.</li>
+    <li>Emiya Manga Class. (2018). &#x30AB;&#x30B1;&#x30A2;&#x30DF;&#x306E;&#x63CF;&#x304D;&#x65B9;. <a href="http://lanmy.net/2018/05/manga-kakeami/">lanmy.net/2018/05/manga-kakeami/</a>.</li>
     <li>Shechtman, D., Blech, I., Gratias, D., &amp; Cahn, J. W. (1984). Metallic phase with long-range orientational order and no translational symmetry. <em>Physical Review Letters</em>, 53(20), 1951&ndash;1953.</li>
     <li>de Gennes, P.-G., &amp; Prost, J. (1993). <em>The Physics of Liquid Crystals</em> (2nd ed.). Oxford University Press.</li>
     <li>Cressie, N. (1993). <em>Statistics for Spatial Data</em> (Revised ed.). Wiley.</li>
     <li>Cliff, A. D., &amp; Ord, J. K. (1981). <em>Spatial Processes: Models &amp; Applications</em>. Pion.</li>
     <li>Toulouse, G. (1977). Theory of the frustration effect in spin glasses. <em>Communications on Physics</em>, 2, 115&ndash;119.</li>
   </ol>
+
+  <!-- Appendices -->
+  <div class="appendix">
+  <h2>Appendix A. Two-Way ANOVA Tables</h2>
+  <p>
+    Two-way ANOVA (Type II) with placement and angle as fixed factors.
+    Only the four 2&times;2 factorial conditions are included
+    (gridCheckerboard is excluded).
+    $\eta^2$ and bias-corrected $\omega^2$ are reported as effect size measures.
+    Assumption tests (Shapiro&ndash;Wilk for normality of residuals,
+    Levene&rsquo;s test for homoscedasticity) are reported below each table.
+    No correction for multiple testing across metrics is applied.
+  </p>
+
+  
+  <details>
+    <summary>ANOVA: $E_{\mathrm{contrast}}$</summary>
+  <table>
+    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th><th>$\omega^2$</th></tr>
+    
+    <tr>
+      <td>Placement</td>
+      <td>0.000455</td>
+      <td>1</td>
+      <td>1.47</td>
+      <td>0.2261</td>
+      <td>0.0002</td>
+      <td>0.0001</td>
+    </tr>
+    
+    <tr>
+      <td>Angle</td>
+      <td>2.014764</td>
+      <td>1</td>
+      <td>6512.32</td>
+      <td>0.0000</td>
+      <td>0.9425</td>
+      <td>0.9422</td>
+    </tr>
+    
+    <tr>
+      <td>Placement × Angle</td>
+      <td>0.000023</td>
+      <td>1</td>
+      <td>0.07</td>
+      <td>0.7872</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Residual</td>
+      <td>0.122513</td>
+      <td>396</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.0573</td>
+      <td>—</td>
+    </tr>
+    
+  </table>
+  
+  
+  <p style="font-size: 0.85rem; color: #555;">
+    Assumption tests &mdash;
+    Shapiro&ndash;Wilk: $W = 0.9255$, $p = 0.0000$;
+    Levene: $F = 55.9992$, $p = 0.0000$.
+  </p>
+  
+  </details>
+  
+  <details>
+    <summary>ANOVA: $H_{\mathrm{angle}}$</summary>
+  <table>
+    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th><th>$\omega^2$</th></tr>
+    
+    <tr>
+      <td>Placement</td>
+      <td>0.000115</td>
+      <td>1</td>
+      <td>0.34</td>
+      <td>0.5609</td>
+      <td>0.0008</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Angle</td>
+      <td>0.006915</td>
+      <td>1</td>
+      <td>20.29</td>
+      <td>0.0000</td>
+      <td>0.0487</td>
+      <td>0.0462</td>
+    </tr>
+    
+    <tr>
+      <td>Placement × Angle</td>
+      <td>0.000002</td>
+      <td>1</td>
+      <td>0.01</td>
+      <td>0.9331</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Residual</td>
+      <td>0.134947</td>
+      <td>396</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.9505</td>
+      <td>—</td>
+    </tr>
+    
+  </table>
+  
+  
+  <p style="font-size: 0.85rem; color: #555;">
+    Assumption tests &mdash;
+    Shapiro&ndash;Wilk: $W = 0.9308$, $p = 0.0000$;
+    Levene: $F = 8.7589$, $p = 0.0000$.
+  </p>
+  
+  </details>
+  
+  <details>
+    <summary>ANOVA: $R_1$</summary>
+  <table>
+    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th><th>$\omega^2$</th></tr>
+    
+    <tr>
+      <td>Placement</td>
+      <td>0.002996</td>
+      <td>1</td>
+      <td>1.57</td>
+      <td>0.2111</td>
+      <td>0.0002</td>
+      <td>0.0001</td>
+    </tr>
+    
+    <tr>
+      <td>Angle</td>
+      <td>12.813288</td>
+      <td>1</td>
+      <td>6710.04</td>
+      <td>0.0000</td>
+      <td>0.9441</td>
+      <td>0.9438</td>
+    </tr>
+    
+    <tr>
+      <td>Placement × Angle</td>
+      <td>0.000040</td>
+      <td>1</td>
+      <td>0.02</td>
+      <td>0.8849</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Residual</td>
+      <td>0.756189</td>
+      <td>396</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.0557</td>
+      <td>—</td>
+    </tr>
+    
+  </table>
+  
+  
+  <p style="font-size: 0.85rem; color: #555;">
+    Assumption tests &mdash;
+    Shapiro&ndash;Wilk: $W = 0.9433$, $p = 0.0000$;
+    Levene: $F = 44.2606$, $p = 0.0000$.
+  </p>
+  
+  </details>
+  
+  <details>
+    <summary>ANOVA: $C_{\mathrm{cov}}$</summary>
+  <table>
+    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th><th>$\omega^2$</th></tr>
+    
+    <tr>
+      <td>Placement</td>
+      <td>3.942295</td>
+      <td>1</td>
+      <td>7823.87</td>
+      <td>0.0000</td>
+      <td>0.9518</td>
+      <td>0.9516</td>
+    </tr>
+    
+    <tr>
+      <td>Angle</td>
+      <td>0.000008</td>
+      <td>1</td>
+      <td>0.02</td>
+      <td>0.9001</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Placement × Angle</td>
+      <td>0.000017</td>
+      <td>1</td>
+      <td>0.03</td>
+      <td>0.8543</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Residual</td>
+      <td>0.199537</td>
+      <td>396</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.0482</td>
+      <td>—</td>
+    </tr>
+    
+  </table>
+  
+  
+  <p style="font-size: 0.85rem; color: #555;">
+    Assumption tests &mdash;
+    Shapiro&ndash;Wilk: $W = 0.9667$, $p = 0.0000$;
+    Levene: $F = 47.7260$, $p = 0.0000$.
+  </p>
+  
+  </details>
+  
+  <details>
+    <summary>ANOVA: $U_{\mathrm{vor}}$</summary>
+  <table>
+    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th><th>$\omega^2$</th></tr>
+    
+    <tr>
+      <td>Placement</td>
+      <td>10.119846</td>
+      <td>1</td>
+      <td>3465.56</td>
+      <td>0.0000</td>
+      <td>0.8975</td>
+      <td>0.8970</td>
+    </tr>
+    
+    <tr>
+      <td>Angle</td>
+      <td>0.000000</td>
+      <td>1</td>
+      <td>0.00</td>
+      <td>1.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Placement × Angle</td>
+      <td>0.000000</td>
+      <td>1</td>
+      <td>0.00</td>
+      <td>1.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Residual</td>
+      <td>1.156367</td>
+      <td>396</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.1025</td>
+      <td>—</td>
+    </tr>
+    
+  </table>
+  
+  
+  <p style="font-size: 0.85rem; color: #555;">
+    Assumption tests &mdash;
+    Shapiro&ndash;Wilk: $W = 0.9529$, $p = 0.0000$;
+    Levene: $F = 54.8041$, $p = 0.0000$.
+  </p>
+  
+  </details>
+  
+  <details>
+    <summary>ANOVA: $R_2$</summary>
+  <table>
+    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th><th>$\omega^2$</th></tr>
+    
+    <tr>
+      <td>Placement</td>
+      <td>0.000135</td>
+      <td>1</td>
+      <td>0.15</td>
+      <td>0.6972</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Angle</td>
+      <td>2.920270</td>
+      <td>1</td>
+      <td>3268.69</td>
+      <td>0.0000</td>
+      <td>0.8918</td>
+      <td>0.8913</td>
+    </tr>
+    
+    <tr>
+      <td>Placement × Angle</td>
+      <td>0.000244</td>
+      <td>1</td>
+      <td>0.27</td>
+      <td>0.6013</td>
+      <td>0.0001</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Residual</td>
+      <td>0.353789</td>
+      <td>396</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.1080</td>
+      <td>—</td>
+    </tr>
+    
+  </table>
+  
+  
+  <p style="font-size: 0.85rem; color: #555;">
+    Assumption tests &mdash;
+    Shapiro&ndash;Wilk: $W = 0.9741$, $p = 0.0000$;
+    Levene: $F = 25.1803$, $p = 0.0000$.
+  </p>
+  
+  </details>
+  
+  <details>
+    <summary>ANOVA: $R_3$</summary>
+  <table>
+    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th><th>$\omega^2$</th></tr>
+    
+    <tr>
+      <td>Placement</td>
+      <td>0.000000</td>
+      <td>1</td>
+      <td>0.00</td>
+      <td>0.9844</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Angle</td>
+      <td>0.426088</td>
+      <td>1</td>
+      <td>647.16</td>
+      <td>0.0000</td>
+      <td>0.6200</td>
+      <td>0.6185</td>
+    </tr>
+    
+    <tr>
+      <td>Placement × Angle</td>
+      <td>0.000398</td>
+      <td>1</td>
+      <td>0.60</td>
+      <td>0.4372</td>
+      <td>0.0006</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Residual</td>
+      <td>0.260723</td>
+      <td>396</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.3794</td>
+      <td>—</td>
+    </tr>
+    
+  </table>
+  
+  
+  <p style="font-size: 0.85rem; color: #555;">
+    Assumption tests &mdash;
+    Shapiro&ndash;Wilk: $W = 0.9953$, $p = 0.2674$;
+    Levene: $F = 4.0526$, $p = 0.0074$.
+  </p>
+  
+  </details>
+  
+  <details>
+    <summary>ANOVA: $\xi$</summary>
+  <table>
+    <tr><th>Source</th><th>SS</th><th>df</th><th>$F$</th><th>$p$</th><th>$\eta^2$</th><th>$\omega^2$</th></tr>
+    
+    <tr>
+      <td>Placement</td>
+      <td>1.141877</td>
+      <td>1</td>
+      <td>0.00</td>
+      <td>0.9742</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Angle</td>
+      <td>316624.747489</td>
+      <td>1</td>
+      <td>289.89</td>
+      <td>0.0000</td>
+      <td>0.4226</td>
+      <td>0.4206</td>
+    </tr>
+    
+    <tr>
+      <td>Placement × Angle</td>
+      <td>1.837482</td>
+      <td>1</td>
+      <td>0.00</td>
+      <td>0.9673</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+    </tr>
+    
+    <tr>
+      <td>Residual</td>
+      <td>432518.103745</td>
+      <td>396</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.5773</td>
+      <td>—</td>
+    </tr>
+    
+  </table>
+  
+  
+  <p style="font-size: 0.85rem; color: #555;">
+    Assumption tests &mdash;
+    Shapiro&ndash;Wilk: $W = 0.8264$, $p = 0.0000$;
+    Levene: $F = 54.5177$, $p = 0.0000$.
+  </p>
+  
+  </details>
+  
+
+  
+  <h4>Goodness of Fit for $\xi$ (Exponential Decay Model)</h4>
+  <p>
+    Mean $R^2$ values for the per-seed exponential decay fit $|R_k| \approx A \exp(-k/\xi)$:
+  </p>
+  <table>
+    <tr><th>Condition</th><th>Mean $R^2$</th></tr>
+    
+    <tr><td>Poisson + BFS</td><td>0.730</td></tr>
+    
+    <tr><td>Poisson + Random</td><td>-0.124</td></tr>
+    
+    <tr><td>Random + BFS</td><td>0.691</td></tr>
+    
+    <tr><td>Random + Random</td><td>-0.149</td></tr>
+    
+    <tr><td>Grid + Checkerboard</td><td>-0.384</td></tr>
+    
+  </table>
+  <p style="font-size: 0.85rem; color: #555;">
+    $R^2 \approx 0.7$ for BFS conditions indicates acceptable but imperfect fit.
+    Negative $R^2$ for random and checkerboard conditions indicates model inapplicability
+    (see Section 3.3 caveats).
+    Alternative decay models (e.g. power-law $|R_k| \sim k^{-\alpha}$) have not been compared.
+  </p>
+  
+
+  <h2>Appendix B. Pairwise Effect Sizes (Cohen&rsquo;s $d$)</h2>
+  <p>
+    Cohen&rsquo;s $d$ (pooled SD) for the four factorial conditions (6 pairs);
+    the deterministic gridCheckerboard condition is excluded.
+    Positive $d$ indicates the first condition scores higher than the second.
+    By convention: $|d| &lt; 0.2$ negligible, $0.2$&ndash;$0.5$ small, $0.5$&ndash;$0.8$ medium, $&gt; 0.8$ large.
+  </p>
+
+  
+  <details>
+    <summary>$E_{\mathrm{contrast}}$</summary>
+  <table>
+    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
+    
+    <tr><td>Poisson + BFS vs Poisson + Random</td><td>7.654</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + BFS</td><td>-0.305</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + Random</td><td>8.509</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + BFS</td><td>-7.714</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + Random</td><td>-0.107</td></tr>
+    
+    <tr><td>Random + BFS vs Random + Random</td><td>8.570</td></tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$H_{\mathrm{angle}}$</summary>
+  <table>
+    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
+    
+    <tr><td>Poisson + BFS vs Poisson + Random</td><td>-0.480</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + BFS</td><td>0.042</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + Random</td><td>-0.387</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + BFS</td><td>0.516</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + Random</td><td>0.089</td></tr>
+    
+    <tr><td>Random + BFS vs Random + Random</td><td>-0.424</td></tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$R_1$</summary>
+  <table>
+    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
+    
+    <tr><td>Poisson + BFS vs Poisson + Random</td><td>-7.746</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + BFS</td><td>0.276</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + Random</td><td>-8.684</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + BFS</td><td>7.799</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + Random</td><td>0.103</td></tr>
+    
+    <tr><td>Random + BFS vs Random + Random</td><td>-8.729</td></tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$C_{\mathrm{cov}}$</summary>
+  <table>
+    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
+    
+    <tr><td>Poisson + BFS vs Poisson + Random</td><td>0.069</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + BFS</td><td>8.987</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + Random</td><td>8.780</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + BFS</td><td>8.912</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + Random</td><td>8.709</td></tr>
+    
+    <tr><td>Random + BFS vs Random + Random</td><td>-0.004</td></tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$U_{\mathrm{vor}}$</summary>
+  <table>
+    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
+    
+    <tr><td>Poisson + BFS vs Poisson + Random</td><td>0.000</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + BFS</td><td>-5.887</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + Random</td><td>-5.887</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + BFS</td><td>-5.887</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + Random</td><td>-5.887</td></tr>
+    
+    <tr><td>Random + BFS vs Random + Random</td><td>0.000</td></tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$R_2$</summary>
+  <table>
+    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
+    
+    <tr><td>Poisson + BFS vs Poisson + Random</td><td>5.504</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + BFS</td><td>-0.157</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + Random</td><td>5.844</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + BFS</td><td>-5.602</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + Random</td><td>0.010</td></tr>
+    
+    <tr><td>Random + BFS vs Random + Random</td><td>5.949</td></tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$R_3$</summary>
+  <table>
+    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
+    
+    <tr><td>Poisson + BFS vs Poisson + Random</td><td>-2.296</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + BFS</td><td>0.089</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + Random</td><td>-2.584</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + BFS</td><td>2.505</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + Random</td><td>-0.071</td></tr>
+    
+    <tr><td>Random + BFS vs Random + Random</td><td>-2.849</td></tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$xi$</summary>
+  <table>
+    <tr><th>Pair</th><th>Cohen's $d$</th></tr>
+    
+    <tr><td>Poisson + BFS vs Poisson + Random</td><td>-1.692</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + BFS</td><td>0.116</td></tr>
+    
+    <tr><td>Poisson + BFS vs Random + Random</td><td>-1.712</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + BFS</td><td>1.693</td></tr>
+    
+    <tr><td>Poisson + Random vs Random + Random</td><td>-0.005</td></tr>
+    
+    <tr><td>Random + BFS vs Random + Random</td><td>-1.713</td></tr>
+    
+  </table>
+  </details>
+  
+
+  <h2>Appendix C. Tukey HSD Post-Hoc Comparisons</h2>
+  <p>
+    Tukey&rsquo;s Honestly Significant Difference test ($\alpha = 0.05$) for
+    the four factorial conditions (6 pairwise comparisons per metric).
+    &ldquo;Reject&rdquo; indicates that the mean difference is statistically significant
+    after correction for multiple comparisons within each metric.
+  </p>
+
+  
+  <details>
+    <summary>$E_{\mathrm{contrast}}$</summary>
+  <table>
+    <tr><th>Group 1</th><th>Group 2</th><th>Mean Diff</th><th>$p$-adj</th><th>Lower</th><th>Upper</th><th>Reject</th></tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Poisson + Random</td>
+      <td>-0.1424</td>
+      <td>0.0000</td>
+      <td>-0.1488</td>
+      <td>-0.1360</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + BFS</td>
+      <td>0.0017</td>
+      <td>0.9098</td>
+      <td>-0.0048</td>
+      <td>0.0081</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + Random</td>
+      <td>-0.1398</td>
+      <td>0.0000</td>
+      <td>-0.1462</td>
+      <td>-0.1334</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + BFS</td>
+      <td>0.1441</td>
+      <td>0.0000</td>
+      <td>0.1377</td>
+      <td>0.1505</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + Random</td>
+      <td>0.0026</td>
+      <td>0.7211</td>
+      <td>-0.0038</td>
+      <td>0.0090</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>Random + Random</td>
+      <td>-0.1415</td>
+      <td>0.0000</td>
+      <td>-0.1479</td>
+      <td>-0.1350</td>
+      <td>Yes</td>
+    </tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$H_{\mathrm{angle}}$</summary>
+  <table>
+    <tr><th>Group 1</th><th>Group 2</th><th>Mean Diff</th><th>$p$-adj</th><th>Lower</th><th>Upper</th><th>Reject</th></tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Poisson + Random</td>
+      <td>0.0085</td>
+      <td>0.0070</td>
+      <td>0.0017</td>
+      <td>0.0152</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + BFS</td>
+      <td>-0.0009</td>
+      <td>0.9850</td>
+      <td>-0.0077</td>
+      <td>0.0058</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + Random</td>
+      <td>0.0072</td>
+      <td>0.0295</td>
+      <td>0.0005</td>
+      <td>0.0140</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + BFS</td>
+      <td>-0.0094</td>
+      <td>0.0020</td>
+      <td>-0.0161</td>
+      <td>-0.0027</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + Random</td>
+      <td>-0.0012</td>
+      <td>0.9654</td>
+      <td>-0.0080</td>
+      <td>0.0055</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>Random + Random</td>
+      <td>0.0082</td>
+      <td>0.0102</td>
+      <td>0.0014</td>
+      <td>0.0149</td>
+      <td>Yes</td>
+    </tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$R_1$</summary>
+  <table>
+    <tr><th>Group 1</th><th>Group 2</th><th>Mean Diff</th><th>$p$-adj</th><th>Lower</th><th>Upper</th><th>Reject</th></tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Poisson + Random</td>
+      <td>0.3586</td>
+      <td>0.0000</td>
+      <td>0.3426</td>
+      <td>0.3745</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + BFS</td>
+      <td>-0.0048</td>
+      <td>0.8620</td>
+      <td>-0.0208</td>
+      <td>0.0111</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + Random</td>
+      <td>0.3525</td>
+      <td>0.0000</td>
+      <td>0.3365</td>
+      <td>0.3684</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + BFS</td>
+      <td>-0.3634</td>
+      <td>0.0000</td>
+      <td>-0.3794</td>
+      <td>-0.3475</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + Random</td>
+      <td>-0.0061</td>
+      <td>0.7563</td>
+      <td>-0.0221</td>
+      <td>0.0098</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>Random + Random</td>
+      <td>0.3573</td>
+      <td>0.0000</td>
+      <td>0.3414</td>
+      <td>0.3733</td>
+      <td>Yes</td>
+    </tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$C_{\mathrm{cov}}$</summary>
+  <table>
+    <tr><th>Group 1</th><th>Group 2</th><th>Mean Diff</th><th>$p$-adj</th><th>Lower</th><th>Upper</th><th>Reject</th></tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Poisson + Random</td>
+      <td>-0.0007</td>
+      <td>0.9963</td>
+      <td>-0.0089</td>
+      <td>0.0075</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + BFS</td>
+      <td>-0.1990</td>
+      <td>0.0000</td>
+      <td>-0.2072</td>
+      <td>-0.1908</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + Random</td>
+      <td>-0.1988</td>
+      <td>0.0000</td>
+      <td>-0.2070</td>
+      <td>-0.1906</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + BFS</td>
+      <td>-0.1983</td>
+      <td>0.0000</td>
+      <td>-0.2065</td>
+      <td>-0.1901</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + Random</td>
+      <td>-0.1981</td>
+      <td>0.0000</td>
+      <td>-0.2063</td>
+      <td>-0.1899</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>Random + Random</td>
+      <td>0.0001</td>
+      <td>1.0000</td>
+      <td>-0.0081</td>
+      <td>0.0083</td>
+      <td>No</td>
+    </tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$U_{\mathrm{vor}}$</summary>
+  <table>
+    <tr><th>Group 1</th><th>Group 2</th><th>Mean Diff</th><th>$p$-adj</th><th>Lower</th><th>Upper</th><th>Reject</th></tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Poisson + Random</td>
+      <td>0.0000</td>
+      <td>1.0000</td>
+      <td>-0.0197</td>
+      <td>0.0197</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + BFS</td>
+      <td>0.3181</td>
+      <td>0.0000</td>
+      <td>0.2984</td>
+      <td>0.3378</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + Random</td>
+      <td>0.3181</td>
+      <td>0.0000</td>
+      <td>0.2984</td>
+      <td>0.3378</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + BFS</td>
+      <td>0.3181</td>
+      <td>0.0000</td>
+      <td>0.2984</td>
+      <td>0.3378</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + Random</td>
+      <td>0.3181</td>
+      <td>0.0000</td>
+      <td>0.2984</td>
+      <td>0.3378</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>Random + Random</td>
+      <td>0.0000</td>
+      <td>1.0000</td>
+      <td>-0.0197</td>
+      <td>0.0197</td>
+      <td>No</td>
+    </tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$R_2$</summary>
+  <table>
+    <tr><th>Group 1</th><th>Group 2</th><th>Mean Diff</th><th>$p$-adj</th><th>Lower</th><th>Upper</th><th>Reject</th></tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Poisson + Random</td>
+      <td>-0.1693</td>
+      <td>0.0000</td>
+      <td>-0.1802</td>
+      <td>-0.1584</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + BFS</td>
+      <td>0.0027</td>
+      <td>0.9172</td>
+      <td>-0.0082</td>
+      <td>0.0136</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + Random</td>
+      <td>-0.1697</td>
+      <td>0.0000</td>
+      <td>-0.1806</td>
+      <td>-0.1588</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + BFS</td>
+      <td>0.1721</td>
+      <td>0.0000</td>
+      <td>0.1611</td>
+      <td>0.1830</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + Random</td>
+      <td>-0.0004</td>
+      <td>0.9997</td>
+      <td>-0.0113</td>
+      <td>0.0105</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>Random + Random</td>
+      <td>-0.1725</td>
+      <td>0.0000</td>
+      <td>-0.1834</td>
+      <td>-0.1615</td>
+      <td>Yes</td>
+    </tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$R_3$</summary>
+  <table>
+    <tr><th>Group 1</th><th>Group 2</th><th>Mean Diff</th><th>$p$-adj</th><th>Lower</th><th>Upper</th><th>Reject</th></tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Poisson + Random</td>
+      <td>0.0633</td>
+      <td>0.0000</td>
+      <td>0.0539</td>
+      <td>0.0726</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + BFS</td>
+      <td>-0.0019</td>
+      <td>0.9502</td>
+      <td>-0.0113</td>
+      <td>0.0074</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + Random</td>
+      <td>0.0653</td>
+      <td>0.0000</td>
+      <td>0.0560</td>
+      <td>0.0747</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + BFS</td>
+      <td>-0.0652</td>
+      <td>0.0000</td>
+      <td>-0.0746</td>
+      <td>-0.0559</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + Random</td>
+      <td>0.0020</td>
+      <td>0.9427</td>
+      <td>-0.0073</td>
+      <td>0.0114</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>Random + Random</td>
+      <td>0.0673</td>
+      <td>0.0000</td>
+      <td>0.0579</td>
+      <td>0.0766</td>
+      <td>Yes</td>
+    </tr>
+    
+  </table>
+  </details>
+  
+  <details>
+    <summary>$\xi$</summary>
+  <table>
+    <tr><th>Group 1</th><th>Group 2</th><th>Mean Diff</th><th>$p$-adj</th><th>Lower</th><th>Upper</th><th>Reject</th></tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Poisson + Random</td>
+      <td>56.1339</td>
+      <td>0.0000</td>
+      <td>44.0756</td>
+      <td>68.1921</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + BFS</td>
+      <td>-0.0287</td>
+      <td>1.0000</td>
+      <td>-12.0870</td>
+      <td>12.0296</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + BFS</td>
+      <td>Random + Random</td>
+      <td>56.3763</td>
+      <td>0.0000</td>
+      <td>44.3180</td>
+      <td>68.4345</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + BFS</td>
+      <td>-56.1626</td>
+      <td>0.0000</td>
+      <td>-68.2208</td>
+      <td>-44.1043</td>
+      <td>Yes</td>
+    </tr>
+    
+    <tr>
+      <td>Poisson + Random</td>
+      <td>Random + Random</td>
+      <td>0.2424</td>
+      <td>0.9999</td>
+      <td>-11.8158</td>
+      <td>12.3007</td>
+      <td>No</td>
+    </tr>
+    
+    <tr>
+      <td>Random + BFS</td>
+      <td>Random + Random</td>
+      <td>56.4050</td>
+      <td>0.0000</td>
+      <td>44.3467</td>
+      <td>68.4632</td>
+      <td>Yes</td>
+    </tr>
+    
+  </table>
+  </details>
+  
+
+  </div><!-- /appendix -->
 
   <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--color-border); font-size: 0.8rem; color: #999; text-align: center;">
     Generated by <a href="https://github.com/kakeami/kakeami-generator" style="color: var(--color-accent);">kakeami-generator</a> experiment framework.
