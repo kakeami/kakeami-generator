@@ -33,7 +33,7 @@
      7.1 Effect of Angle Assignment
      7.2 Effect of Tile Placement
      7.3 Checkerboard as Crystalline Order
-     7.4 Correlation Length Analysis and Quasicrystalline Order
+     7.4 Correlation Length Analysis and Frustrated Short-Range Order
      7.5 k-Invariance of Quality Metrics
      7.6 Limitations
   8. Future Work
@@ -163,18 +163,22 @@
     Despite its importance in manga production, no formal framework exists
     for defining kakeami quality or evaluating automatic generation algorithms.
     This report presents the first mathematical formulation of kakeami quality,
-    proposing six complementary metrics &mdash;
+    proposing eight complementary metrics &mdash;
     angle contrast ($E_{\mathrm{contrast}}$), angle entropy ($H_{\mathrm{angle}}$),
-    angle autocorrelation at graph distances 2 and 3 ($R_2$, $R_3$),
+    angle autocorrelation at graph distances 1&ndash;3 ($R_1$, $R_2$, $R_3$),
+    correlation length ($\xi$),
     coverage ratio ($C_{\mathrm{cov}}$), and Voronoi cell area CV ($U_{\mathrm{vor}}$) &mdash;
-    drawing on concepts from quasicrystalline order and spatial statistics.
-    We argue that good kakeami exhibits <em>quasicrystalline order</em>:
+    drawing on concepts from spatial statistics and orientational order in condensed matter physics.
+    We argue that good kakeami exhibits <em>frustrated short-range order</em>:
     short-range angular contrast (high $E_{\mathrm{contrast}}$) without long-range periodic repetition ($R_k \approx 0$).
     We conduct a controlled 2&times;2 factorial experiment (tile placement &times; angle assignment)
     with 100 random seeds, supplemented by a deterministic grid-checkerboard reference condition.
     Two-way ANOVA reveals that angle assignment is the dominant factor
     ($\eta^2 \approx 0.94$ for $E_{\mathrm{contrast}}$, $\eta^2 \approx 0.89$ for $R_2$),
-    and the proposed Poisson-disk + BFS greedy combination achieves the best overall quality.
+    and the proposed Poisson-disk + BFS greedy combination achieves the best balance
+    of local contrast, angular diversity, spatial coverage, and aperiodicity
+    among the stochastic conditions.
+    No single condition dominates all metrics.
     The $R_k$ autocorrelation metrics reveal the structure of angle correlations beyond immediate neighbours:
     random conditions show $R_2 \approx 0$ (no correlation),
     while BFS greedy introduces a mild positive $R_2$ as a side effect of local contrast maximisation.
@@ -210,7 +214,7 @@
     (4) <em>spatial uniformity</em> &mdash; evenly distributed tile centres; and
     (5) <em>aperiodicity</em> &mdash; no long-range periodic repetition of angles.
     This last property distinguishes natural-looking kakeami from mechanical patterns like a checkerboard.
-    We propose a six-metric framework that independently measures each property
+    We propose a multi-metric framework that independently measures each property
     and a controlled 2&times;2 factorial experiment evaluating two independent components of a proposed algorithm:
     <strong>tile placement</strong> (Poisson-disk vs. uniform random)
     and <strong>angle assignment</strong> (BFS greedy vs. random).
@@ -219,7 +223,7 @@
     The remainder of the report is organised as follows.
     Section 2 reviews related work in NPR hatching and manga generation to identify the gap this work addresses.
     Section 3 introduces a novel mathematical formulation for kakeami quality,
-    drawing on concepts from nematic liquid crystal physics and direction field theory.
+    drawing on concepts from spatial statistics, direction field theory, and condensed matter physics.
     Section 4 describes the proposed algorithm and the baseline conditions.
     Section 5 details the experimental setup, Section 6 presents the quantitative results
     including two-way ANOVA and effect size analysis,
@@ -315,7 +319,7 @@
   <p>
     Given a configuration $K$ and its adjacency edge set $E$
     (Voronoi adjacency edges derived from Delaunay triangulation of tile centres),
-    we propose six complementary metrics split across three axes:
+    we propose eight metrics split across three axes:
     two <em>angular</em> metrics evaluating local orientation quality,
     two <em>aperiodicity</em> metrics detecting long-range periodic repetition,
     and two <em>spatial</em> metrics evaluating placement quality.
@@ -377,7 +381,7 @@
   </p>
   <ul>
     <li><strong>Small $\xi$ ($\approx 1$&ndash;$2$):</strong> rapid decorrelation &mdash; strong local contrast
-        with no long-range angular order. This is the signature of <em>quasicrystalline order</em>.</li>
+        with no long-range angular order. This is the signature of <em>frustrated short-range order</em>.</li>
     <li><strong>Large $\xi$ ($\gg 1$ or $\infty$):</strong> persistent angular correlation across many hops &mdash;
         crystalline periodicity (e.g. checkerboard patterns with alternating $R_k$).</li>
     <li><strong>$\xi \approx 0$ or undefined:</strong> no correlation at any distance &mdash;
@@ -389,14 +393,18 @@
     in liquid crystals (de Gennes &amp; Prost, 1993) and the degree of frustration
     in antiferromagnetic systems (Toulouse, 1977).
   </p>
-
   <p>
-    <strong>Relationship to $E_{\mathrm{LdG}}$.</strong>
-    The previously used Landau&ndash;de Gennes energy $E_{\mathrm{LdG}} = \frac{1}{|E|} \sum_{(i,j) \in E} \sin^2(\phi_i - \phi_j)$
-    is mathematically equivalent to $(1 - R_1) / 2$ (where $R_1$ is the lag-1 autocorrelation).
-    Since $E_{\mathrm{LdG}}$ is monotonically related to $E_{\mathrm{contrast}}$ and provides no independent information,
-    we replace it with the lag-2 and lag-3 autocorrelations $R_2$ and $R_3$,
-    which capture genuinely new information about aperiodicity.
+    <strong>Caveats.</strong>
+    The exponential decay model is a working hypothesis;
+    goodness-of-fit ($R^2$, residual analysis) has not been formally assessed,
+    and alternative models (e.g. power-law decay $|R_k| \sim k^{-\alpha}$) have not been compared.
+    For the checkerboard condition, $|R_k|$ oscillates rather than decays,
+    so the fit does not converge and $\xi = \infty$ is a sentinel value indicating model failure,
+    not a physically meaningful infinite correlation length.
+    Similarly, $\xi = 0$ for random conditions reflects the absence of any correlation to fit,
+    rather than a meaningful zero-length correlation.
+    These boundary cases should be interpreted as &ldquo;outside the model&rsquo;s domain&rdquo;
+    rather than as quantitative measurements.
   </p>
 
   <h4>Spatial Metrics</h4>
@@ -553,8 +561,8 @@
   <!-- 6. Results -->
   <h2>6. Results</h2>
   <p>
-    We present the experimental results using the six quality metrics defined in Section 3
-    ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_2$, $R_3$, $C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
+    We present the experimental results using the eight quality metrics defined in Section 3
+    ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_1$, $R_2$, $R_3$, $\xi$, $C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
     All metrics are computed at $k = 1$.
     Section 6.1 shows box plots, Section 6.2 provides summary statistics,
     Section 6.3 presents the statistical analysis (two-way ANOVA and effect sizes),
@@ -588,7 +596,7 @@
   <figure>
     <img src="assets/boxplot_rAuto1.png" alt="Box plot of rAuto1" />
     <figcaption>
-      Figure 4: Angle autocorrelation $R_1$ (nearest neighbours). Equivalent to $(1 - 2 E_{\mathrm{LdG}})$. BFS conditions achieve strong negative $R_1$ (high contrast).
+      Figure 4: Angle autocorrelation $R_1$ (nearest neighbours). BFS conditions achieve strong negative $R_1$ (high contrast).
       
     </figcaption>
   </figure>
@@ -628,7 +636,7 @@
   <figure>
     <img src="assets/boxplot_xi.png" alt="Box plot of xi" />
     <figcaption>
-      Figure 9: Correlation length $\xi$. Lower values indicate more rapid decorrelation (quasicrystalline order). BFS conditions achieve small $\xi$, indicating effective local-only angular contrast.
+      Figure 9: Correlation length $\xi$ distribution across conditions. Lower values indicate more rapid decorrelation of angular correlations with graph distance.
       
     </figcaption>
   </figure>
@@ -752,8 +760,12 @@
     The ANOVA uses only the original four 2&times;2 factorial conditions
     (gridCheckerboard is excluded as it does not belong to the factorial design).
     We report $F$-statistics, $p$-values, and effect sizes ($\eta^2 = SS_{\mathrm{effect}} / SS_{\mathrm{total}}$).
+    Note that $\eta^2$ has a known upward bias; partial $\eta^2$ or $\omega^2$ would be more conservative
+    estimates, and ANOVA assumptions (normality, homoscedasticity) have not been formally tested
+    (see Limitations, Section 7.6).
     Pairwise comparisons (Tukey HSD at $\alpha = 0.05$ and Cohen's $d$)
     are computed across all five conditions (10 pairs).
+    No correction for multiple testing across metrics is applied.
   </p>
 
   
@@ -1099,6 +1111,12 @@
     Positive $d$ indicates the first condition scores higher than the second.
     By convention: $|d| < 0.2$ negligible, $0.2$&ndash;$0.5$ small, $0.5$&ndash;$0.8$ medium, $> 0.8$ large.
   </p>
+  <p>
+    <em>Note:</em> The Grid + Checkerboard condition is deterministic (zero variance across seeds).
+    Pairwise Cohen's $d$ involving this condition uses only the other condition's standard deviation
+    as the pooled SD, which may overstate the effect size.
+    These values should be interpreted with caution.
+  </p>
 
   
   <h4>$E_{\mathrm{contrast}}$</h4>
@@ -1314,14 +1332,17 @@
   <h3>6.4 $|R_1|$ vs $\xi$ Scatter</h3>
   <p>
     The scatter plot below maps each run in the space of nearest-neighbour contrast ($|R_1|$)
-    versus correlation length ($\xi$), providing a two-dimensional classification of angular order.
-    Quasicrystalline order occupies the upper-left region (high $|R_1|$, low $\xi$):
-    strong local contrast that does not propagate to distant tiles.
+    versus correlation length ($\xi$).
+    The five conditions separate into three clusters:
+    BFS conditions (upper-left, high $|R_1|$, low $\xi$),
+    random conditions (lower-left, low $|R_1|$, low $\xi$),
+    and the checkerboard (upper-right, high $|R_1|$, large $\xi$).
   </p>
   <figure>
     <img src="assets/scatter_r1_xi.png" alt="|R_1| vs ξ scatter plot" />
-    <figcaption>Figure 11: Per-run scatter of $|R_1|$ vs $\xi$. The Poisson + BFS condition
-    clusters in the quasicrystalline region (high contrast, rapid decorrelation).</figcaption>
+    <figcaption>Figure 11: Per-run scatter of $|R_1|$ vs $\xi$.
+    Note that region labels (Amorphous, Quasicrystalline, Crystalline) are descriptive annotations,
+    not quantitatively defined classification boundaries.</figcaption>
   </figure>
   
 
@@ -1459,8 +1480,8 @@
   <p>
     The results in Section 6 reveal clear performance differences among the five conditions.
     Sections 7.1&ndash;7.2 analyse the two factors of the 2&times;2 factorial design,
-    Section 7.3 reinterprets the checkerboard condition through the lens of crystalline vs. quasicrystalline order,
-    Section 7.4 discusses what the $R_k$ autocorrelation metrics reveal about aperiodicity,
+    Section 7.3 reinterprets the checkerboard condition through the lens of periodic vs. aperiodic order,
+    Section 7.4 discusses what the $R_k$ autocorrelation metrics and correlation length reveal about aperiodicity,
     Section 7.5 discusses $k$-invariance of the metric framework,
     and Section 7.6 identifies limitations.
   </p>
@@ -1494,7 +1515,7 @@
   <h3>7.3 Checkerboard as Crystalline Order</h3>
   <p>
     The Grid + Checkerboard condition can be understood through the analogy
-    of crystalline vs. quasicrystalline order from condensed matter physics.
+    of periodic vs. aperiodic order from condensed matter physics.
     By placing tiles on a regular grid and alternating between just two angles (0&deg; and 90&deg;),
     the checkerboard creates a <em>crystalline</em> pattern with competitive local contrast
     but severely limited angle diversity ($H_{\mathrm{angle}} \approx 0.28$, using only 2 of 12 bins).
@@ -1521,7 +1542,16 @@
     enabling direct metric comparison.
   </p>
 
-  <h3>7.4 Correlation Length Analysis and Quasicrystalline Order</h3>
+  <h3>7.4 Correlation Length Analysis and Frustrated Short-Range Order</h3>
+  <p>
+    <em>Terminology note.</em>
+    We borrow the term &ldquo;quasicrystalline&rdquo; loosely from condensed matter physics
+    to describe patterns with short-range angular order but no long-range periodicity.
+    This is an analogy, not a claim of structural equivalence with physical quasicrystals
+    (Shechtman et al., 1984), which exhibit strict long-range orientational order with forbidden symmetries.
+    The BFS greedy output more closely resembles a <em>frustrated short-range ordered</em> state.
+    Rigorous verification of the analogy would require spectral analysis (Section 8.4).
+  </p>
   <p>
     The full $R_k$ correlogram (Figure 10) reveals fundamentally different spatial structures
     across conditions. The checkerboard&rsquo;s correlogram oscillates with period 2
@@ -1537,38 +1567,39 @@
     The correlation length $\xi$ quantifies this decay rate.
     BFS conditions achieve small $\xi$ values ($\approx 1$&ndash;$2$),
     indicating that angular correlations are confined to the immediate neighbourhood.
-    The checkerboard produces large or infinite $\xi$ (the exponential decay model fails
-    because $|R_k|$ does not decay). Random conditions yield $\xi \approx 0$
-    (no correlation to decay from).
+    The checkerboard produces $\xi = \infty$ because the exponential decay model fails
+    to fit the oscillatory $|R_k|$ profile (see caveats in Section 3.3).
+    Random conditions yield $\xi \approx 0$ because there is no correlation to fit.
+    In both cases, $\xi$ is a sentinel value indicating that the exponential model
+    does not apply, rather than a quantitative measurement.
   </p>
   <p>
-    This three-way separation &mdash; crystalline (large $\xi$, periodic $R_k$),
-    quasicrystalline (small $\xi$, decaying $R_k$ from strong $|R_1|$),
+    This three-way separation &mdash; periodic (large $\xi$, oscillatory $R_k$),
+    frustrated short-range order (small $\xi$, decaying $R_k$ from strong $|R_1|$),
     and amorphous (near-zero $R_k$ everywhere) &mdash;
-    directly parallels the classification of orientational order in condensed matter physics.
+    is reminiscent of the classification of orientational order in condensed matter physics.
     In liquid crystal theory, the correlation length characterises the spatial extent of
     nematic ordering (de Gennes &amp; Prost, 1993);
     in frustrated antiferromagnets, short correlation lengths arise from the impossibility
     of simultaneously satisfying all pairwise constraints on a non-bipartite graph (Toulouse, 1977).
-    The BFS greedy algorithm produces exactly this frustrated state:
+    This analogy suggests that the BFS greedy algorithm produces a similar frustrated state:
     each tile&rsquo;s angle is maximally different from its neighbours,
     but this local repulsion cannot propagate coherently through the irregular Poisson-Voronoi topology.
+    However, BFS greedy is a sequential heuristic, not a ground-state search,
+    so the analogy to physical frustration remains informal.
   </p>
   <p>
-    The relationship $E_{\mathrm{LdG}} = (1 - R_1)/2$ (Section 3.3) explains why the previously used
-    Landau&ndash;de Gennes energy was redundant with $E_{\mathrm{contrast}}$:
-    both measure the same lag-1 angular repulsion, merely with different transformations.
     The full correlogram and derived $\xi$ capture a genuinely independent property &mdash;
     the spatial structure of angle correlations beyond immediate neighbours &mdash;
     that $E_{\mathrm{contrast}}$ alone cannot detect.
-    The $|R_1|$ vs $\xi$ scatter plot (Figure 11) visualises this two-dimensional classification,
-    with the Poisson + BFS condition occupying the quasicrystalline region.
+    The $|R_1|$ vs $\xi$ scatter plot (Figure 11) visualises this two-dimensional space,
+    with the Poisson + BFS condition occupying the frustrated short-range order region.
   </p>
 
   <h3>7.5 $k$-Invariance of Quality Metrics</h3>
   <p>
-    An important property of all six quality metrics is their invariance to the kake count $k$.
-    All six metrics &mdash; $E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_2$, $R_3$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ &mdash;
+    An important property of all quality metrics is their invariance to the kake count $k$.
+    All eight metrics &mdash; $E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$, $R_1$, $R_2$, $R_3$, $\xi$, $C_{\mathrm{cov}}$, and $U_{\mathrm{vor}}$ &mdash;
     depend only on the primary angle $\phi_i$ of each tile,
     which is determined entirely by the tile placement and angle assignment strategies.
     The secondary strokes added for $k \geq 2$ (at fixed angular offsets of 45&deg;, 90&deg;, etc.)
@@ -1589,6 +1620,10 @@
     <li>The quality metrics are $k$-invariant: they capture only primary-angle structure and cannot evaluate the visual contribution of secondary hatch layers (see Section 7.5).</li>
     <li>All conditions use Voronoi adjacency derived from Delaunay triangulation of tile centres. This ensures consistency between the BFS optimisation graph and metric evaluation, but other adjacency definitions (e.g. $k$-nearest-neighbours or radius-based) remain unexplored.</li>
     <li>The Grid + Checkerboard condition uses a slightly different tile count (64 vs. ~69) than the Poisson-disk conditions due to its regular grid spacing, though the difference (~7%) is small enough to permit direct metric comparison (see Section 7.3).</li>
+    <li>ANOVA assumptions (normality of residuals, homoscedasticity) have not been formally verified via Shapiro&ndash;Wilk or Levene&rsquo;s tests. Nonparametric alternatives (e.g. Kruskal&ndash;Wallis) have not been compared.</li>
+    <li>The exponential decay model for $\xi$ has not been validated against alternatives (e.g. power-law decay). Goodness-of-fit statistics ($R^2$, residual plots) are not reported. See the caveats in Section 3.3.</li>
+    <li>The region labels in the $|R_1|$ vs $\xi$ scatter plot (Figure 11) are qualitative annotations without quantitatively defined classification boundaries.</li>
+    <li>No single condition dominates all eight metrics. The recommendation of Poisson-disk + BFS greedy reflects a subjective weighting of metric importance, not a formally defined composite score.</li>
   </ul>
 
   <!-- 8. Future Work -->
@@ -1635,7 +1670,7 @@
   </p>
   <figure>
     <img src="assets/pattern-stipple.svg" alt="Stipple (dot) pattern fill in rectangular tiles" style="max-width: 400px;" />
-    <figcaption>Figure 8: Stipple fill in rectangular tiles.
+    <figcaption>Figure 12: Stipple fill in rectangular tiles.
       Dots are placed along hatch-line positions; the directional alignment of dots encodes each tile&rsquo;s primary angle.
       Tile placement and angle assignment are identical to standard kakeami ($k = 2$, seed = 42).</figcaption>
   </figure>
@@ -1654,7 +1689,7 @@
   </p>
   <figure>
     <img src="assets/pattern-voronoi.svg" alt="Voronoi-cell tiles individually hatched" style="max-width: 400px;" />
-    <figcaption>Figure 9: Voronoi-cell tiles ($k = 1$).
+    <figcaption>Figure 13: Voronoi-cell tiles ($k = 1$).
       Each Voronoi cell is individually hatched at the angle assigned by the BFS greedy algorithm.
       Single-direction hatching makes the per-cell angle variation clearly visible.</figcaption>
   </figure>
@@ -1690,7 +1725,7 @@
     The angular power spectrum $\hat{R}(\omega) = \sum_k R_k e^{-i\omega k}$ would provide
     a frequency-domain characterisation: a flat spectrum for amorphous order,
     a sharp peak at $\omega = \pi$ for checkerboard periodicity,
-    and a broad low-frequency hump for the quasicrystalline BFS conditions.
+    and a broad low-frequency hump for the frustrated short-range order BFS conditions.
   </p>
   <p>
     Proving bounds on $R_k$ for BFS greedy on Poisson-Voronoi graphs is a natural next step.
@@ -1698,7 +1733,7 @@
     relating it to the circular chromatic number $\chi_c(G)$.
     For Poisson-Voronoi graphs (expected chromatic number $\approx 4$),
     tight bounds on $\xi$ as a function of graph topology would
-    formalise the connection between spatial statistics and quasicrystalline order.
+    formalise the connection between spatial statistics and frustrated short-range order.
   </p>
 
   <h3>8.5 $k$-Aware Quality Metrics</h3>
@@ -1718,20 +1753,21 @@
   <p>
     This report presented the first mathematical formulation of kakeami quality
     and a controlled experiment evaluating tile placement and angle assignment strategies.
-    We identified five properties of good kakeami and proposed complementary metrics to measure them:
+    We identified five properties of good kakeami and proposed eight complementary metrics to measure them:
     angular metrics ($E_{\mathrm{contrast}}$, $H_{\mathrm{angle}}$),
-    the full $R_k$ autocorrelation correlogram with derived correlation length $\xi$,
+    autocorrelation metrics ($R_1$, $R_2$, $R_3$, $\xi$),
     and spatial metrics ($C_{\mathrm{cov}}$, $U_{\mathrm{vor}}$).
-    The central insight is that good kakeami exhibits <em>quasicrystalline order</em> &mdash;
-    strong short-range angular contrast ($|R_1| \approx 1$) with rapidly decaying correlation
-    ($\xi \approx 1$&ndash;$2$) &mdash; clearly separated from both crystalline periodicity
-    (checkerboard: $\xi \to \infty$) and amorphous randomness ($|R_1| \approx 0$).
-    The $R_k$ correlogram and $\xi$ quantify this distinction using standard tools
-    from spatial statistics and liquid crystal physics.
+    The $R_k$ correlogram separates conditions into three qualitatively distinct regimes &mdash;
+    periodic (checkerboard), frustrated short-range order (BFS greedy),
+    and amorphous (random) &mdash; an observation reminiscent of orientational order
+    classifications in condensed matter physics, though the analogy remains informal.
     The 2&times;2 factorial experiment with 100 seeds demonstrated that
     angle assignment is the dominant factor ($\eta^2 \approx 0.94$),
     while Poisson-disk placement provides superior spatial uniformity.
-    The proposed Poisson-disk + BFS greedy combination achieves the best overall quality.
+    No single condition dominates all metrics;
+    the proposed Poisson-disk + BFS greedy combination achieves the best balance
+    of local contrast, angular diversity, spatial coverage, and aperiodicity
+    among the stochastic conditions.
     Future work includes tonal gradation via spatially varying $k$,
     generalisation to arbitrary tile shapes and fill patterns,
     spectral analysis of the $R_k$ sequence,
