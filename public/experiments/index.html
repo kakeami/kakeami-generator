@@ -27,7 +27,6 @@
      6.1 Representative Images
      6.2 Quality Metrics (box plots, correlogram)
      6.3 Summary Table
-     6.4 |R_1| vs ξ Scatter
   7. Discussion
      7.1 Effect of Angle Assignment
      7.2 Effect of Tile Placement
@@ -576,8 +575,7 @@
     All metrics are computed at $k = 1$.
     Section 6.1 shows representative images,
     Section 6.2 presents box plots and the correlogram,
-    Section 6.3 provides summary statistics,
-    and Section 6.4 shows the $|R_1|$ vs $\xi$ scatter.
+    and Section 6.3 provides summary statistics.
     Full statistical analysis (two-way ANOVA, pairwise effect sizes, and post-hoc tests)
     is provided in the Appendices.
   </p>
@@ -895,24 +893,6 @@
     Its role is discussed in Section 7.4.
   </p>
 
-  
-  <h3>6.4 $|R_1|$ vs $\xi$ Scatter</h3>
-  <p>
-    The scatter plot below maps each run in the space of nearest-neighbour contrast ($|R_1|$)
-    versus correlation length ($\xi$).
-    The five conditions separate into three clusters:
-    BFS conditions (upper-left, high $|R_1|$, low $\xi$),
-    random conditions (lower-left, low $|R_1|$, low $\xi$),
-    and the checkerboard (upper-right, high $|R_1|$, large $\xi$).
-  </p>
-  <figure>
-    <img src="assets/scatter_r1_xi.png" alt="|R_1| vs ξ scatter plot" />
-    <figcaption>Figure 11: Per-run scatter of $|R_1|$ vs $\xi$.
-    Note that region labels are descriptive annotations,
-    not quantitatively defined classification boundaries.</figcaption>
-  </figure>
-  
-
   <!-- 7. Discussion -->
   <h2>7. Discussion</h2>
   <p>
@@ -1018,8 +998,7 @@
     This three-way separation &mdash; periodic, frustrated short-range order, and amorphous &mdash;
     is reminiscent of orientational order classifications in condensed matter physics,
     though the analogy remains informal (see Section 8.4).
-    The $|R_1|$ vs $\xi$ scatter plot (Figure 11) visualises this space,
-    with the BFS conditions occupying the frustrated short-range order region.
+    The BFS conditions occupy the frustrated short-range order region of this space.
   </p>
 
   <h3>7.5 $k$-Invariance of Quality Metrics</h3>
