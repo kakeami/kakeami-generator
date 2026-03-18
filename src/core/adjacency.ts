@@ -107,6 +107,53 @@ export function kHopPairs(
  * Build adjacency list from Delaunay triangulation.
  * For n < 4, returns a complete graph.
  */
+/**
+ * Single BFS pass per node, grouping all pairs by graph distance up to kMax.
+ * Returns Map<k, [i,j][]> with canonical pairs (i<j), no duplicates.
+ */
+export function allPairsByDistance(
+  edges: readonly [number, number][],
+  n: number,
+  kMax: number = 15,
+): Map<number, [number, number][]> {
+  const result = new Map<number, [number, number][]>();
+  if (n === 0) return result;
+  const adj = edgesToAdjList(edges, n);
+
+  for (let src = 0; src < n; src++) {
+    const dist = new Int32Array(n).fill(-1);
+    dist[src] = 0;
+    const queue = [src];
+    let head = 0;
+    while (head < queue.length) {
+      const u = queue[head++]!;
+      if (dist[u]! >= kMax) break;
+      for (const v of adj[u]!) {
+        if (dist[v] === -1) {
+          dist[v] = dist[u]! + 1;
+          queue.push(v);
+        }
+      }
+    }
+    for (let v = src + 1; v < n; v++) {
+      const d = dist[v]!;
+      if (d >= 1 && d <= kMax) {
+        let arr = result.get(d);
+        if (!arr) {
+          arr = [];
+          result.set(d, arr);
+        }
+        arr.push([src, v]);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Build adjacency list from Delaunay triangulation.
+ * For n < 4, returns a complete graph.
+ */
 export function buildVoronoiAdjacency(
   centers: [number, number][],
 ): number[][] {

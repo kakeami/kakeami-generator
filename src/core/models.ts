@@ -4,7 +4,7 @@
 
 import { dRp1 } from './math-utils';
 import { rectMinDistance } from './geometry';
-import { kHopPairs } from './adjacency';
+import { kHopPairs, allPairsByDistance } from './adjacency';
 
 const PI = Math.PI;
 
@@ -284,5 +284,28 @@ export class KakeamiConfig {
       total += Math.cos(2 * (this.tiles[i]!.phi - this.tiles[j]!.phi));
     }
     return total / pairs.length;
+  }
+
+  /**
+   * Full R_k correlogram from k=1 up to kMax (or graph diameter).
+   * Returns array of {k, rk, nPairs}. Stops at first k with 0 pairs.
+   */
+  rAutoProfile(kMax: number = 15): { k: number; rk: number; nPairs: number }[] {
+    const n = this.tiles.length;
+    if (n === 0) return [];
+    const edges = this.adjacency();
+    const pairsByDist = allPairsByDistance(edges, n, kMax);
+    const result: { k: number; rk: number; nPairs: number }[] = [];
+    const maxK = pairsByDist.size > 0 ? Math.max(...pairsByDist.keys()) : 0;
+    for (let k = 1; k <= maxK; k++) {
+      const pairs = pairsByDist.get(k);
+      if (!pairs || pairs.length === 0) break;
+      let total = 0;
+      for (const [i, j] of pairs) {
+        total += Math.cos(2 * (this.tiles[i]!.phi - this.tiles[j]!.phi));
+      }
+      result.push({ k, rk: total / pairs.length, nPairs: pairs.length });
+    }
+    return result;
   }
 }

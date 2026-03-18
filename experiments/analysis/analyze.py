@@ -17,6 +17,7 @@ from matplotlib.collections import LineCollection
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 from scipy import stats
+from scipy.optimize import curve_fit
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from statsmodels.stats.anova import anova_lm
@@ -39,39 +40,94 @@ CONDITION_LABELS = {
 }
 # Original 4 conditions for 2×2 ANOVA (gridCheckerboard is outside the factorial design)
 ANOVA_CONDITIONS = ["poissonBfs", "poissonRandom", "randomBfs", "randomRandom"]
-METRICS = ["eContrast", "hAngle", "cCov", "uVor", "rAuto2", "rAuto3"]
+METRICS = ["eContrast", "hAngle", "rAuto1", "cCov", "uVor", "rAuto2", "rAuto3", "xi"]
 METRIC_LABELS = {
     "eContrast": r"$E_{\mathrm{contrast}}$",
     "hAngle": r"$H_{\mathrm{angle}}$",
+    "rAuto1": r"$R_1$",
     "cCov": r"$C_{\mathrm{cov}}$",
     "uVor": r"$U_{\mathrm{vor}}$",
     "rAuto2": r"$R_2$",
     "rAuto3": r"$R_3$",
+    "xi": r"$\xi$",
 }
 METRIC_LABELS_PLAIN = {
     "eContrast": "E_contrast",
     "hAngle": "H_angle",
+    "rAuto1": "R_1",
     "cCov": "C_cov",
     "uVor": "U_vor",
     "rAuto2": "R_2",
     "rAuto3": "R_3",
+    "xi": "xi",
 }
-# For E_contrast, H_angle, C_cov: higher is better; for U_vor: lower is better
-# For R_2, R_3: |mean| closest to 0 is best (handled specially in best/second-best)
+# For E_contrast, H_angle, C_cov: higher is better; for U_vor, xi: lower is better
+# For R_1, R_2, R_3: |mean| closest to 0 is best (handled specially in best/second-best)
 METRIC_HIGHER_IS_BETTER = {
     "eContrast": True,
     "hAngle": True,
+    "rAuto1": None,  # special: |mean| closest to 0
     "cCov": True,
     "uVor": False,
     "rAuto2": None,  # special: |mean| closest to 0
     "rAuto3": None,  # special: |mean| closest to 0
+    "xi": False,  # lower is better (rapid decorrelation)
 }
+
+
+def _exp_decay(k, A, xi):
+    """Exponential decay model: |R_k| ~ A * exp(-k/xi)."""
+    return A * np.exp(-k / xi)
+
+
+def compute_xi(profile: list[dict]) -> float:
+    """Fit |R_k| ~ A * exp(-k/ξ) via curve_fit. Return ξ (or np.inf if non-converging)."""
+    if not profile or len(profile) < 2:
+        return np.nan
+    ks = np.array([e["k"] for e in profile], dtype=float)
+    abs_rk = np.array([abs(e["rk"]) for e in profile], dtype=float)
+    weights = np.array([e["nPairs"] for e in profile], dtype=float)
+
+    # All near-zero → no correlation to fit
+    if np.max(abs_rk) < 0.01:
+        return 0.0
+
+    try:
+        popt, _ = curve_fit(
+            _exp_decay, ks, abs_rk,
+            p0=[abs_rk[0], 2.0],
+            sigma=1.0 / np.sqrt(np.maximum(weights, 1)),
+            bounds=([0, 0.01], [2.0, 100.0]),
+            maxfev=5000,
+        )
+        return float(popt[1])
+    except (RuntimeError, ValueError):
+        return np.inf
 
 
 def load_data() -> pd.DataFrame:
     with open(RESULTS_DIR / "metrics.json") as f:
         data = json.load(f)
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+
+    # Extract rAuto1 and xi from rAutoProfile
+    def _extract_r1(profile):
+        if not profile:
+            return 0.0
+        for e in profile:
+            if e["k"] == 1:
+                return e["rk"]
+        return 0.0
+
+    if "rAutoProfile" in df.columns:
+        df["rAuto1"] = df["rAutoProfile"].apply(_extract_r1)
+        df["xi"] = df["rAutoProfile"].apply(compute_xi)
+    else:
+        # Backward compat: no profile data
+        df["rAuto1"] = 0.0
+        df["xi"] = np.nan
+
+    return df
 
 
 def plot_boxplots(df: pd.DataFrame) -> None:
@@ -92,9 +148,14 @@ def plot_boxplots(df: pd.DataFrame) -> None:
             patch.set_alpha(0.7)
 
         ax.tick_params(axis="x", rotation=45)
-        if metric in ("rAuto2", "rAuto3"):
+        if metric in ("rAuto1", "rAuto2", "rAuto3"):
             ax.set_ylim(-1, 1)
             ax.axhline(y=0, color="#999", linewidth=0.8, linestyle="--", zorder=1)
+        elif metric == "xi":
+            # Auto-scale for xi; skip infinite values
+            finite_vals = [v for vals in data for v in vals if np.isfinite(v)]
+            if finite_vals:
+                ax.set_ylim(0, max(finite_vals) * 1.1)
         else:
             ax.set_ylim(0, 1)
         ax.grid(axis="y", alpha=0.3)
@@ -112,7 +173,9 @@ def compute_best_cells(df: pd.DataFrame) -> dict:
         means = {}
         for cond in CONDITIONS:
             sub = df[df["condition"] == cond]
-            means[CONDITION_LABELS[cond]] = sub[m].mean()
+            vals = sub[m].values.astype(float)
+            vals = vals[np.isfinite(vals)]
+            means[CONDITION_LABELS[cond]] = np.mean(vals) if len(vals) > 0 else np.inf
         direction = METRIC_HIGHER_IS_BETTER[m]
         if direction is None:
             # R_k: |mean| closest to 0 is best
@@ -132,7 +195,9 @@ def compute_second_best_cells(df: pd.DataFrame) -> dict:
         means = {}
         for cond in CONDITIONS:
             sub = df[df["condition"] == cond]
-            means[CONDITION_LABELS[cond]] = sub[m].mean()
+            vals = sub[m].values.astype(float)
+            vals = vals[np.isfinite(vals)]
+            means[CONDITION_LABELS[cond]] = np.mean(vals) if len(vals) > 0 else np.inf
         direction = METRIC_HIGHER_IS_BETTER[m]
         if direction is None:
             # R_k: sort by |mean|
@@ -153,9 +218,14 @@ def summary_table(df: pd.DataFrame) -> pd.DataFrame:
         sub = df[df["condition"] == cond]
         row = {"condition": CONDITION_LABELS[cond]}
         for m in METRICS:
-            mean = sub[m].mean()
-            std = sub[m].std()
-            row[METRIC_LABELS_PLAIN[m]] = f"{mean:.3f} \u00b1 {std:.3f}"
+            vals = sub[m].values.astype(float)
+            finite = vals[np.isfinite(vals)]
+            if len(finite) > 0:
+                mean = np.mean(finite)
+                std = np.std(finite, ddof=1) if len(finite) > 1 else 0.0
+                row[METRIC_LABELS_PLAIN[m]] = f"{mean:.3f} \u00b1 {std:.3f}"
+            else:
+                row[METRIC_LABELS_PLAIN[m]] = "\u221e"
         row["nTiles (mean)"] = f"{sub['nTiles'].mean():.1f}"
         row["nEdges (mean)"] = f"{sub['nEdges'].mean():.1f}"
         rows.append(row)
@@ -175,7 +245,13 @@ def two_way_anova(df: pd.DataFrame) -> dict:
 
     results = {}
     for metric in METRICS:
-        model = ols(f"{metric} ~ C(placement) * C(angle)", data=df).fit()
+        df_m = df.copy()
+        # Skip metrics with non-finite values (e.g. xi with inf)
+        if not np.all(np.isfinite(df_m[metric])):
+            df_m = df_m[np.isfinite(df_m[metric])]
+        if len(df_m) < 10:
+            continue
+        model = ols(f"{metric} ~ C(placement) * C(angle)", data=df_m).fit()
         table = anova_lm(model, typ=2)
         # Compute η² = SS_effect / SS_total
         ss_total = table["sum_sq"].sum()
@@ -192,8 +268,10 @@ def compute_effect_sizes(df: pd.DataFrame) -> dict:
         for i in range(len(CONDITIONS)):
             for j in range(i + 1, len(CONDITIONS)):
                 c1, c2 = CONDITIONS[i], CONDITIONS[j]
-                x1 = df[df["condition"] == c1][metric].values
-                x2 = df[df["condition"] == c2][metric].values
+                x1 = df[df["condition"] == c1][metric].values.astype(float)
+                x2 = df[df["condition"] == c2][metric].values.astype(float)
+                x1 = x1[np.isfinite(x1)]
+                x2 = x2[np.isfinite(x2)]
                 n1, n2 = len(x1), len(x2)
                 pooled_sd = np.sqrt(
                     ((n1 - 1) * x1.std(ddof=1) ** 2 + (n2 - 1) * x2.std(ddof=1) ** 2)
@@ -212,9 +290,12 @@ def pairwise_tests(df: pd.DataFrame) -> dict:
     """Tukey HSD post-hoc for each metric."""
     results = {}
     for metric in METRICS:
+        df_m = df[np.isfinite(df[metric])].copy()
+        if len(df_m) < 10:
+            continue
         tukey = pairwise_tukeyhsd(
-            df[metric],
-            df["condition"].map(CONDITION_LABELS),
+            df_m[metric],
+            df_m["condition"].map(CONDITION_LABELS),
             alpha=0.05,
         )
         results[metric] = str(tukey)
@@ -423,6 +504,103 @@ def generate_algorithm_illustration() -> None:
     print("  Saved algorithm_pipeline.png")
 
 
+def plot_correlogram(df: pd.DataFrame) -> None:
+    """Plot mean R_k ± 95% CI per condition across graph distance k."""
+    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+
+    if "rAutoProfile" not in df.columns:
+        print("  Skipping correlogram (no rAutoProfile data)")
+        return
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    colors = {"poissonBfs": "#4C72B0", "poissonRandom": "#55A868",
+              "randomBfs": "#C44E52", "randomRandom": "#8172B2",
+              "gridCheckerboard": "#CCB974"}
+
+    for cond in CONDITIONS:
+        sub = df[df["condition"] == cond]
+        # Collect R_k values per k across all seeds
+        k_vals: dict[int, list[float]] = {}
+        for profile in sub["rAutoProfile"]:
+            if not profile:
+                continue
+            for entry in profile:
+                k = entry["k"]
+                k_vals.setdefault(k, []).append(entry["rk"])
+
+        if not k_vals:
+            continue
+
+        ks = sorted(k_vals.keys())
+        means = [np.mean(k_vals[k]) for k in ks]
+        ci95 = [1.96 * np.std(k_vals[k]) / np.sqrt(len(k_vals[k])) for k in ks]
+
+        ax.plot(ks, means, "o-", color=colors[cond], label=CONDITION_LABELS[cond],
+                markersize=4, linewidth=1.5)
+        ax.fill_between(ks,
+                        [m - c for m, c in zip(means, ci95)],
+                        [m + c for m, c in zip(means, ci95)],
+                        color=colors[cond], alpha=0.15)
+
+    ax.axhline(y=0, color="#999", linewidth=0.8, linestyle="--", zorder=1)
+    ax.set_xlabel("Graph distance $k$", fontsize=11)
+    ax.set_ylabel("$R_k$", fontsize=11)
+    ax.set_title("Angle Autocorrelation Correlogram", fontsize=13)
+    ax.set_ylim(-1, 1)
+    ax.legend(fontsize=9)
+    ax.grid(axis="y", alpha=0.3)
+    plt.tight_layout()
+    fig.savefig(ASSETS_DIR / "correlogram.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print("  Saved correlogram.png")
+
+
+def plot_r1_xi_scatter(df: pd.DataFrame) -> None:
+    """Scatter plot of |R_1| vs ξ, color-coded by condition."""
+    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+
+    if "xi" not in df.columns or "rAuto1" not in df.columns:
+        print("  Skipping R1-xi scatter (missing data)")
+        return
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    colors = {"poissonBfs": "#4C72B0", "poissonRandom": "#55A868",
+              "randomBfs": "#C44E52", "randomRandom": "#8172B2",
+              "gridCheckerboard": "#CCB974"}
+
+    for cond in CONDITIONS:
+        sub = df[df["condition"] == cond]
+        xi_vals = sub["xi"].values.copy()
+        r1_abs = np.abs(sub["rAuto1"].values)
+        # Cap infinite xi for display
+        finite_mask = np.isfinite(xi_vals)
+        max_finite = np.max(xi_vals[finite_mask]) if np.any(finite_mask) else 10
+        xi_vals[~finite_mask] = max_finite * 1.5
+        ax.scatter(xi_vals, r1_abs, c=colors[cond], label=CONDITION_LABELS[cond],
+                   alpha=0.5, s=15, edgecolors="none")
+
+    ax.set_xlabel(r"Correlation length $\xi$", fontsize=11)
+    ax.set_ylabel(r"$|R_1|$", fontsize=11)
+    ax.set_title(r"$|R_1|$ vs $\xi$: Order Classification", fontsize=13)
+    ax.set_ylim(0, 1.05)
+    ax.legend(fontsize=9)
+    ax.grid(alpha=0.3)
+
+    # Annotate regions
+    xlim = ax.get_xlim()
+    ax.text(xlim[1] * 0.05, 0.95, "Amorphous\n(low $|R_1|$, low $\\xi$)",
+            fontsize=8, color="#666", ha="left", va="top")
+    ax.text(xlim[1] * 0.5, 0.95, "Quasicrystalline\n(high $|R_1|$, low $\\xi$)",
+            fontsize=8, color="#666", ha="center", va="top")
+    ax.text(xlim[1] * 0.9, 0.95, "Crystalline\n(high $|R_1|$, high $\\xi$)",
+            fontsize=8, color="#666", ha="right", va="top")
+
+    plt.tight_layout()
+    fig.savefig(ASSETS_DIR / "scatter_r1_xi.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print("  Saved scatter_r1_xi.png")
+
+
 def render_report(
     df: pd.DataFrame,
     summary: pd.DataFrame,
@@ -464,6 +642,9 @@ def render_report(
             {"pair": p["pair"], "d": f"{p['cohen_d']:.3f}"} for p in pairs
         ]
 
+    has_correlogram = (ASSETS_DIR / "correlogram.png").exists()
+    has_scatter = (ASSETS_DIR / "scatter_r1_xi.png").exists()
+
     html = template.render(
         summary_rows=summary.to_dict("records"),
         conditions=CONDITIONS,
@@ -475,6 +656,8 @@ def render_report(
         anova_data=anova_data,
         effect_data=effect_data,
         n_seeds=len(df["seed"].unique()),
+        has_correlogram=has_correlogram,
+        has_scatter=has_scatter,
     )
 
     output_path = OUTPUT_DIR / "index.html"
@@ -516,6 +699,12 @@ def main() -> None:
 
     print("Generating algorithm illustration...")
     generate_algorithm_illustration()
+
+    print("Generating correlogram...")
+    plot_correlogram(df)
+
+    print("Generating R1-xi scatter...")
+    plot_r1_xi_scatter(df)
 
     print("Rendering report...")
     render_report(df, summary, best_cells, second_best_cells, anova_results, effect_sizes, tukey_results)

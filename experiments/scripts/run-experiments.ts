@@ -45,6 +45,7 @@ interface ExperimentResult {
   hAngle: number;
   rAuto2: number;
   rAuto3: number;
+  rAutoProfile: { k: number; rk: number; nPairs: number }[];
   wallTimeMs: number;
   svgString: string;
 }

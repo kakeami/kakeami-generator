@@ -268,6 +268,74 @@ describe('KakeamiConfig.rAuto', () => {
   });
 });
 
+describe('KakeamiConfig.rAutoProfile', () => {
+  it('checkerboard 4x4: oscillating profile', () => {
+    const tiles: Tile[] = [];
+    const edges: [number, number][] = [];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const angle = (r + c) % 2 === 0 ? 0 : PI / 2;
+        tiles.push(new Tile(c, r, Block.standard(angle, 1, 0.05)));
+      }
+    }
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const idx = r * 4 + c;
+        if (c < 3) edges.push([idx, idx + 1]);
+        if (r < 3) edges.push([idx, idx + 4]);
+      }
+    }
+    const config = new KakeamiConfig(tiles, [0, 0, 4, 4], 1, 1, 0.5, edges);
+    const profile = config.rAutoProfile();
+    expect(profile.length).toBeGreaterThan(0);
+    // k=1 should be ≈ -1, k=2 should be ≈ +1
+    expect(profile[0]!.rk).toBeCloseTo(-1, 1);
+    expect(profile[1]!.rk).toBeCloseTo(1, 1);
+  });
+
+  it('uniform angle: all R_k = +1', () => {
+    const tiles = [
+      new Tile(0, 0, Block.standard(PI / 4, 1, 0.05)),
+      new Tile(1, 0, Block.standard(PI / 4, 1, 0.05)),
+      new Tile(2, 0, Block.standard(PI / 4, 1, 0.05)),
+      new Tile(3, 0, Block.standard(PI / 4, 1, 0.05)),
+    ];
+    const edges: [number, number][] = [[0, 1], [1, 2], [2, 3]];
+    const config = new KakeamiConfig(tiles, [0, 0, 4, 4], 1, 1, 0.5, edges);
+    const profile = config.rAutoProfile();
+    for (const entry of profile) {
+      expect(entry.rk).toBeCloseTo(1, 5);
+    }
+  });
+
+  it('empty config: empty array', () => {
+    const config = new KakeamiConfig([], [0, 0, 2, 2], 1, 1, 0.5);
+    expect(config.rAutoProfile()).toEqual([]);
+  });
+
+  it('consistency: profile[0].rk ≈ rAuto(1), profile[1].rk ≈ rAuto(2)', () => {
+    const tiles: Tile[] = [];
+    const edges: [number, number][] = [];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const angle = (r + c) % 2 === 0 ? 0 : PI / 2;
+        tiles.push(new Tile(c, r, Block.standard(angle, 1, 0.05)));
+      }
+    }
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const idx = r * 4 + c;
+        if (c < 3) edges.push([idx, idx + 1]);
+        if (r < 3) edges.push([idx, idx + 4]);
+      }
+    }
+    const config = new KakeamiConfig(tiles, [0, 0, 4, 4], 1, 1, 0.5, edges);
+    const profile = config.rAutoProfile();
+    expect(profile[0]!.rk).toBeCloseTo(config.rAuto(1), 10);
+    expect(profile[1]!.rk).toBeCloseTo(config.rAuto(2), 10);
+  });
+});
+
 describe('KakeamiConfig.hAngle', () => {
   it('returns 0 for empty tiles', () => {
     const config = new KakeamiConfig([], [0, 0, 2, 2], 1, 1, 0.5);

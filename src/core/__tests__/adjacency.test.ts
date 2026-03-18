@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildVoronoiAdjacency, voronoiCellAreas, edgesToAdjList, kHopPairs } from '../adjacency';
+import { buildVoronoiAdjacency, voronoiCellAreas, edgesToAdjList, kHopPairs, allPairsByDistance } from '../adjacency';
 
 describe('buildVoronoiAdjacency', () => {
   it('n<4 returns complete graph', () => {
@@ -119,6 +119,37 @@ describe('kHopPairs', () => {
   it('k=0 returns empty', () => {
     const edges: [number, number][] = [[0, 1]];
     expect(kHopPairs(edges, 2, 0)).toEqual([]);
+  });
+});
+
+describe('allPairsByDistance', () => {
+  it('linear chain: k=1→3 pairs, k=2→2 pairs, k=3→1 pair', () => {
+    // 0-1-2-3
+    const edges: [number, number][] = [[0, 1], [1, 2], [2, 3]];
+    const result = allPairsByDistance(edges, 4);
+    expect(result.get(1)!.sort()).toEqual([[0, 1], [1, 2], [2, 3]]);
+    expect(result.get(2)!.sort()).toEqual([[0, 2], [1, 3]]);
+    expect(result.get(3)).toEqual([[0, 3]]);
+  });
+
+  it('triangle (K3): only k=1', () => {
+    const edges: [number, number][] = [[0, 1], [0, 2], [1, 2]];
+    const result = allPairsByDistance(edges, 3);
+    expect(result.get(1)!.sort()).toEqual([[0, 1], [0, 2], [1, 2]]);
+    expect(result.has(2)).toBe(false);
+  });
+
+  it('empty/single node: empty map', () => {
+    expect(allPairsByDistance([], 0).size).toBe(0);
+    expect(allPairsByDistance([], 1).size).toBe(0);
+  });
+
+  it('kMax truncation: chain with kMax=2 omits k=3', () => {
+    const edges: [number, number][] = [[0, 1], [1, 2], [2, 3]];
+    const result = allPairsByDistance(edges, 4, 2);
+    expect(result.has(1)).toBe(true);
+    expect(result.has(2)).toBe(true);
+    expect(result.has(3)).toBe(false);
   });
 });
 

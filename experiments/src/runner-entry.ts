@@ -21,6 +21,7 @@ export interface ExperimentResult {
   hAngle: number;
   rAuto2: number;
   rAuto3: number;
+  rAutoProfile: { k: number; rk: number; nPairs: number }[];
   wallTimeMs: number;
   svgString: string;
 }
@@ -39,6 +40,7 @@ function runExperiment(
   const wallTimeMs = performance.now() - t0;
 
   const edges = config.adjacency();
+  const profile = config.rAutoProfile();
 
   const svg = renderToSvg(config, {
     margin: 0.0,
@@ -64,8 +66,9 @@ function runExperiment(
     cCov: config.cCov(),
     uVor: config.uVor(),
     hAngle: config.hAngle(),
-    rAuto2: config.rAuto(2),
-    rAuto3: config.rAuto(3),
+    rAuto2: profile.find(e => e.k === 2)?.rk ?? 0,
+    rAuto3: profile.find(e => e.k === 3)?.rk ?? 0,
+    rAutoProfile: profile,
     wallTimeMs,
     svgString,
   };

@@ -13,5 +13,5 @@ export {
 } from './geometry';
 export type { Segment } from './geometry';
 export { poissonDisk } from './poisson-disk';
-export { buildVoronoiAdjacency, voronoiCellAreas, edgesToAdjList, kHopPairs } from './adjacency';
+export { buildVoronoiAdjacency, voronoiCellAreas, edgesToAdjList, kHopPairs, allPairsByDistance } from './adjacency';
 export { adjListToEdges, bfsGreedyAngles, voronoiColoring } from './voronoi-coloring';
