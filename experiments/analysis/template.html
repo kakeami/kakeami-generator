@@ -35,13 +35,14 @@
      7.5 k-Invariance of Quality Metrics
      7.6 Limitations
   8. Future Work
-     8.1 Tonal Gradation via Spatially Varying k
-     8.2 Generalisation to Arbitrary Pattern Tiles
-         8.2.1 Non-Line Fill Patterns in Rectangular Tiles
-         8.2.2 Non-Rectangular Tile Shapes
-     8.3 Nawaami (Curved-Line Hatching)
-     8.4 Spectral Analysis and Theoretical Bounds
-     8.5 k-Aware Quality Metrics
+     8.1 Perceptually Aligned Quality Metrics
+     8.2 Tonal Gradation via Spatially Varying k
+     8.3 Generalisation to Arbitrary Pattern Tiles
+         8.3.1 Non-Line Fill Patterns in Rectangular Tiles
+         8.3.2 Non-Rectangular Tile Shapes
+     8.4 Nawaami (Curved-Line Hatching)
+     8.5 Spectral Analysis and Theoretical Bounds
+     8.6 k-Aware Quality Metrics
   9. Conclusion
   10. References
   Appendix A. Two-Way ANOVA Tables
@@ -782,7 +783,7 @@
   <p>
     This three-way separation &mdash; periodic, frustrated short-range order, and amorphous &mdash;
     is reminiscent of orientational order classifications in condensed matter physics,
-    though the analogy remains informal (see Section 8.4).
+    though the analogy remains informal (see Section 8.5).
     The BFS conditions occupy the frustrated short-range order region of this space.
   </p>
 
@@ -794,7 +795,7 @@
     do not influence any of the metrics.
     This means the metrics cannot distinguish between a $k = 1$ and $k = 4$ configuration
     that share the same primary angles, even though they look very different visually.
-    We acknowledge this as a gap and propose $k$-aware metrics as future work (Section 8.5).
+    We acknowledge this as a gap and propose $k$-aware metrics as future work (Section 8.6).
   </p>
 
   <h3>7.6 Limitations</h3>
@@ -822,7 +823,30 @@
     The experiment framework and quality metrics established in this report open several directions for future research.
   </p>
 
-  <h3>8.1 Tonal Gradation via Spatially Varying $k$</h3>
+  <h3>8.1 Perceptually Aligned Quality Metrics</h3>
+  <p>
+    The most pressing open problem identified by this work is the gap between
+    proposed metrics and subjective quality (Section 7.3).
+    The proposed Poisson-disk + BFS greedy condition does not rank first on any of the eight metrics,
+    yet it produces the most natural-looking kakeami by visual inspection.
+    The key unmeasured property is &ldquo;grain&rdquo; &mdash;
+    the simultaneous achievement of local angular contrast, angle diversity, and spatial regularity
+    that no individual metric or linear combination captures.
+  </p>
+  <p>
+    Several directions may bridge this gap.
+    A <em>minimum-edge-contrast</em> metric (e.g. the 5th percentile of per-edge $d_{\mathbb{RP}^1}$)
+    would penalise patterns where some adjacent tiles fuse due to similar angles,
+    directly targeting the &ldquo;no fusion&rdquo; property.
+    A <em>joint metric</em> that multiplies or thresholds $E_{\mathrm{contrast}}$ and $H_{\mathrm{angle}}$
+    simultaneously could exclude conditions that score high on one axis but low on the other.
+    Most directly, a human perceptual study &mdash;
+    pairwise preference judgements across conditions &mdash;
+    would establish ground truth for what &ldquo;good kakeami&rdquo; means
+    and enable metric validation or learned composite scores.
+  </p>
+
+  <h3>8.2 Tonal Gradation via Spatially Varying $k$</h3>
   <p>
     In traditional manga practice, artists create smooth tonal gradients by varying the kake count $k$
     across a region &mdash; transitioning, for example, from 1-kake (lightest) to 4-kake (darkest)
@@ -834,7 +858,7 @@
     e.g. by weighting edge contrast contributions by the local $k$.
   </p>
 
-  <h3>8.2 Generalisation to Arbitrary Pattern Tiles</h3>
+  <h3>8.3 Generalisation to Arbitrary Pattern Tiles</h3>
   <p>
     A key insight of this work is that the proposed algorithm is <em>pattern-agnostic</em> along two independent axes:
     the <strong>fill content</strong> drawn inside each tile, and the <strong>tile shape</strong> itself.
@@ -845,7 +869,7 @@
     This opens two complementary directions for generalisation.
   </p>
 
-  <h4>8.2.1 Non-Line Fill Patterns in Rectangular Tiles</h4>
+  <h4>8.3.1 Non-Line Fill Patterns in Rectangular Tiles</h4>
   <p>
     The rectangular tile shape can be preserved while replacing straight-line hatching
     with a fundamentally different fill primitive.
@@ -865,7 +889,7 @@
       Tile placement and angle assignment are identical to standard kakeami ($k = 2$, seed = 42).</figcaption>
   </figure>
 
-  <h4>8.2.2 Non-Rectangular Tile Shapes</h4>
+  <h4>8.3.2 Non-Rectangular Tile Shapes</h4>
   <p>
     Independently of the fill content, the tile shape itself can be generalised.
     Our algorithm already computes a Voronoi partition internally to determine tile adjacency;
@@ -892,7 +916,7 @@
     with maximal local angular contrast.
   </p>
 
-  <h3>8.3 Nawaami (Curved-Line Hatching)</h3>
+  <h3>8.4 Nawaami (Curved-Line Hatching)</h3>
   <p>
     <strong>Nawaami</strong> (&#x30CA;&#x30EF;&#x30A2;&#x30DF;, also called <em>kakenawa</em> &#x30AB;&#x30B1;&#x30CA;&#x30EF;, literally &ldquo;rope net&rdquo;)
     is a related manga technique that replaces straight hatching lines with curved, sinuous strokes
@@ -908,7 +932,7 @@
     of curved strokes at tile boundaries.
   </p>
 
-  <h3>8.4 Spectral Analysis and Theoretical Bounds</h3>
+  <h3>8.5 Spectral Analysis and Theoretical Bounds</h3>
   <p>
     With the correlation length $\xi$ now established as a concrete measure of angular order (Section 7.4),
     several theoretical directions remain open.
@@ -926,7 +950,7 @@
     formalise the connection between spatial statistics and frustrated short-range order.
   </p>
 
-  <h3>8.5 $k$-Aware Quality Metrics</h3>
+  <h3>8.6 $k$-Aware Quality Metrics</h3>
   <p>
     As discussed in Section 7.5, the current metrics are $k$-invariant &mdash;
     they depend only on the primary angle and cannot evaluate the visual contribution
